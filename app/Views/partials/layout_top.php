@@ -26,6 +26,7 @@
         <?php endif; ?>
       </ul>
       <div class="d-flex">
+        <a class="btn btn-outline-light btn-sm me-2" href="/?page=profile">Profil</a>
         <a class="btn btn-outline-light btn-sm" href="/?page=logout"><?= htmlspecialchars($t->t('nav.logout')) ?></a>
       </div>
     </div>

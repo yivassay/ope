@@ -39,6 +39,9 @@ switch ($page) {
     case 'telegram_bot':
         (new \App\Controllers\TelegramBotController($db, $auth))->index();
         break;
+    case 'profile':
+        (new \App\Controllers\ProfileController($db, $auth))->index();
+        break;
     case 'settings':
         (new \App\Controllers\SettingsController($db, $auth))->index();
         break;
