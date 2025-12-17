@@ -16,7 +16,7 @@ require __DIR__ . '/../partials/layout_top.php';
   <div class="collapse mb-3" id="newOperator">
     <div class="card">
       <div class="card-body">
-        <form method="post" action="/?page=operators&action=save" class="row g-2">
+        <form method="post" action="?page=operators&action=save" class="row g-2">
           <input type="hidden" name="id" value="0">
           <div class="col-12 col-lg-4">
             <input class="form-control" name="name" placeholder="Ism" required>
@@ -68,7 +68,7 @@ require __DIR__ . '/../partials/layout_top.php';
         <?php if (($auth->role() ?? '') === 'admin'): ?>
           <tr class="collapse" id="edit<?= (int)$op['id'] ?>">
             <td colspan="5">
-              <form method="post" action="/?page=operators&action=save" class="row g-2">
+              <form method="post" action="?page=operators&action=save" class="row g-2">
                 <input type="hidden" name="id" value="<?= (int)$op['id'] ?>">
                 <div class="col-12 col-lg-4">
                   <input class="form-control" name="name" value="<?= htmlspecialchars((string)$op['name']) ?>" required>

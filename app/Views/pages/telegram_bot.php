@@ -15,7 +15,7 @@ $note = $row ? (string)$row['note'] : '';
     <h1 class="h4 m-0">Telegram bot (qo‘lda)</h1>
     <div class="text-muted small">Kun: <?= htmlspecialchars($date) ?> — bu qiymatlar Smartomato summalariga qo‘shilmaydi (double-count bo‘lmasin).</div>
   </div>
-  <form class="d-flex gap-2" method="get" action="/">
+  <form class="d-flex gap-2" method="get" action="">
     <input type="hidden" name="page" value="telegram_bot">
     <input class="form-control form-control-sm" type="date" name="date" value="<?= htmlspecialchars($date) ?>">
     <button class="btn btn-outline-secondary btn-sm" type="submit">Ko‘rsatish</button>
@@ -24,7 +24,7 @@ $note = $row ? (string)$row['note'] : '';
 
 <div class="card">
   <div class="card-body">
-    <form method="post" action="/?page=telegram_bot&action=save&date=<?= urlencode($date) ?>" class="row g-3">
+    <form method="post" action="?page=telegram_bot&action=save&date=<?= urlencode($date) ?>" class="row g-3">
       <div class="col-12 col-lg-4">
         <label class="form-label">Buyurtma soni</label>
         <input class="form-control" name="order_count" value="<?= htmlspecialchars((string)$orderCount) ?>" required>

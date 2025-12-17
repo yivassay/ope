@@ -13,21 +13,21 @@
 <body class="bg-light">
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
   <div class="container-fluid">
-    <a class="navbar-brand" href="/?page=dashboard"><?= htmlspecialchars($t->t('app.title')) ?></a>
+    <a class="navbar-brand" href="?page=dashboard"><?= htmlspecialchars($t->t('app.title')) ?></a>
     <div class="collapse navbar-collapse show">
       <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-        <li class="nav-item"><a class="nav-link" href="/?page=dashboard"><?= htmlspecialchars($t->t('nav.dashboard')) ?></a></li>
-        <li class="nav-item"><a class="nav-link" href="/?page=smartomato"><?= htmlspecialchars($t->t('nav.smartomato')) ?></a></li>
-        <li class="nav-item"><a class="nav-link" href="/?page=telegram_bot"><?= htmlspecialchars($t->t('nav.telegram_bot', 'Telegram bot')) ?></a></li>
-        <li class="nav-item"><a class="nav-link" href="/?page=operator_sales"><?= htmlspecialchars($t->t('nav.operator_sales', 'Operator savdo')) ?></a></li>
-        <li class="nav-item"><a class="nav-link" href="/?page=operators"><?= htmlspecialchars($t->t('nav.operators')) ?></a></li>
+        <li class="nav-item"><a class="nav-link" href="?page=dashboard"><?= htmlspecialchars($t->t('nav.dashboard')) ?></a></li>
+        <li class="nav-item"><a class="nav-link" href="?page=smartomato"><?= htmlspecialchars($t->t('nav.smartomato')) ?></a></li>
+        <li class="nav-item"><a class="nav-link" href="?page=telegram_bot"><?= htmlspecialchars($t->t('nav.telegram_bot', 'Telegram bot')) ?></a></li>
+        <li class="nav-item"><a class="nav-link" href="?page=operator_sales"><?= htmlspecialchars($t->t('nav.operator_sales', 'Operator savdo')) ?></a></li>
+        <li class="nav-item"><a class="nav-link" href="?page=operators"><?= htmlspecialchars($t->t('nav.operators')) ?></a></li>
         <?php if (($auth->role() ?? '') === 'admin'): ?>
-          <li class="nav-item"><a class="nav-link" href="/?page=settings"><?= htmlspecialchars($t->t('nav.settings')) ?></a></li>
+          <li class="nav-item"><a class="nav-link" href="?page=settings"><?= htmlspecialchars($t->t('nav.settings')) ?></a></li>
         <?php endif; ?>
       </ul>
       <div class="d-flex">
-        <a class="btn btn-outline-light btn-sm me-2" href="/?page=profile">Profil</a>
-        <a class="btn btn-outline-light btn-sm" href="/?page=logout"><?= htmlspecialchars($t->t('nav.logout')) ?></a>
+        <a class="btn btn-outline-light btn-sm me-2" href="?page=profile">Profil</a>
+        <a class="btn btn-outline-light btn-sm" href="?page=logout"><?= htmlspecialchars($t->t('nav.logout')) ?></a>
       </div>
     </div>
   </div>

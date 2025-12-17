@@ -35,7 +35,7 @@ $tCounts = array_map(static fn($r) => (int)$r['order_count'], $telegramByDay);
             </div>
           </div>
           <?php if (($auth->role() ?? '') === 'admin' && !$smartomatoConfigured): ?>
-            <a class="btn btn-warning" href="/?page=settings">Smartomato sozlash</a>
+            <a class="btn btn-warning" href="?page=settings">Smartomato sozlash</a>
           <?php endif; ?>
         </div>
       </div>
@@ -74,7 +74,7 @@ $tCounts = array_map(static fn($r) => (int)$r['order_count'], $telegramByDay);
             <h2 class="h6 mb-1">Telegram bot (qo‘lda) — bugun</h2>
             <div class="text-muted small">Smartomato summalariga qo‘shilmaydi</div>
           </div>
-          <a class="btn btn-outline-primary btn-sm" href="/?page=telegram_bot">Kiritish</a>
+          <a class="btn btn-outline-primary btn-sm" href="?page=telegram_bot">Kiritish</a>
         </div>
         <div class="row mt-3">
           <div class="col-6">

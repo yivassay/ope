@@ -34,7 +34,7 @@ final class TelegramBotController extends BaseController
                 'u' => (int)($this->auth->id() ?? 0),
             ]);
 
-            Response::redirect('/?page=telegram_bot&date=' . urlencode($date));
+            Response::redirect('?page=telegram_bot&date=' . urlencode($date));
             return;
         }
 

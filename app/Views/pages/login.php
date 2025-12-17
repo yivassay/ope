@@ -18,7 +18,7 @@
       <?php if ($error): ?>
         <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
       <?php endif; ?>
-      <form method="post" action="/?page=login">
+      <form method="post" action="?page=login">
         <div class="mb-3">
           <label class="form-label"><?= htmlspecialchars($t->t('login.username')) ?></label>
           <input class="form-control" name="username" autocomplete="username" required>

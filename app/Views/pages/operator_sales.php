@@ -12,7 +12,7 @@ require __DIR__ . '/../partials/layout_top.php';
     <h1 class="h4 m-0">Operator savdo</h1>
     <div class="text-muted small">Kun: <?= htmlspecialchars($date) ?></div>
   </div>
-  <form class="d-flex gap-2" method="get" action="/">
+  <form class="d-flex gap-2" method="get" action="">
     <input type="hidden" name="page" value="operator_sales">
     <input class="form-control form-control-sm" type="date" name="date" value="<?= htmlspecialchars($date) ?>">
     <button class="btn btn-outline-secondary btn-sm" type="submit">Ko‘rsatish</button>
@@ -65,7 +65,7 @@ require __DIR__ . '/../partials/layout_top.php';
         </tr>
         <tr class="collapse" id="editSale<?= $opId ?>">
           <td colspan="8">
-            <form method="post" action="/?page=operator_sales&action=save&date=<?= urlencode($date) ?>" class="row g-2">
+            <form method="post" action="?page=operator_sales&action=save&date=<?= urlencode($date) ?>" class="row g-2">
               <input type="hidden" name="operator_id" value="<?= $opId ?>">
               <div class="col-12 col-lg-4">
                 <label class="form-label small mb-1">Savdo (so'm)</label>

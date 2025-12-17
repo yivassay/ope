@@ -37,7 +37,7 @@ final class OperatorSalesController extends BaseController
                 'u' => (int)($this->auth->id() ?? 0),
             ]);
 
-            Response::redirect('/?page=operator_sales&date=' . urlencode($date));
+            Response::redirect('?page=operator_sales&date=' . urlencode($date));
             return;
         }
 

@@ -28,7 +28,7 @@ final class OperatorsController extends BaseController
                 $stmt = $this->db->prepare('INSERT INTO operators (name, fixed_salary, percent_rate, is_active) VALUES (:n,:f,:p,:a)');
                 $stmt->execute(['n' => $name, 'f' => $fixed, 'p' => $pct, 'a' => $isActive]);
             }
-            Response::redirect('/?page=operators');
+            Response::redirect('?page=operators');
             return;
         }
 

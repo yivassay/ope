@@ -15,7 +15,7 @@ require __DIR__ . '/../partials/layout_top.php';
     <?php endif; ?>
 
     <h2 class="h6 mt-3">Smartomato API</h2>
-    <form method="post" action="/?page=settings">
+    <form method="post" action="?page=settings">
       <div class="row g-3">
         <div class="col-12 col-lg-6">
           <label class="form-label">Base URL</label>

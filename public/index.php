@@ -22,7 +22,7 @@ if ($page === 'logout') {
 
 // Protected
 if (!$auth->check()) {
-    Response::redirect('/?page=login');
+    Response::redirect('?page=login');
     exit;
 }
 

@@ -17,7 +17,7 @@ require __DIR__ . '/../partials/layout_top.php';
       <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
     <?php endif; ?>
 
-    <form method="post" action="/?page=profile" class="row g-3">
+    <form method="post" action="?page=profile" class="row g-3">
       <div class="col-12 col-lg-4">
         <label class="form-label">Joriy parol</label>
         <input class="form-control" type="password" name="current_password" required>

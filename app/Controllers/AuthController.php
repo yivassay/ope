@@ -14,7 +14,7 @@ final class AuthController extends BaseController
             $username = trim((string)($_POST['username'] ?? ''));
             $password = (string)($_POST['password'] ?? '');
             if ($this->auth->attempt($username, $password)) {
-                Response::redirect('/?page=dashboard');
+                Response::redirect('?page=dashboard');
                 return;
             }
             $error = $this->i18n->t('login.error');
@@ -28,7 +28,7 @@ final class AuthController extends BaseController
     public function logout(): void
     {
         $this->auth->logout();
-        Response::redirect('/?page=login');
+        Response::redirect('?page=login');
     }
 }
 
