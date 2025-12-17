@@ -46,6 +46,14 @@ $tCounts = array_map(static fn($r) => (int)$r['order_count'], $telegramByDay);
     </div>
   </div>
 
+  <?php if (!$byDay): ?>
+    <div class="col-12">
+      <div class="alert alert-info mb-0">
+        Hozircha Smartomato statistikasi yo‘q. Avval <a href="?page=smartomato">Smartomato</a> sahifasida “Yig‘ish” tugmasini bosing yoki cron ishlashini kuting.
+      </div>
+    </div>
+  <?php endif; ?>
+
   <div class="col-12 col-lg-6">
     <div class="card">
       <div class="card-body">
