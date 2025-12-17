@@ -7,6 +7,7 @@
 /** @var array $byPaymentToday */
 /** @var array $telegramByDay */
 /** @var array $telegramToday */
+/** @var string $activeDate */
 require __DIR__ . '/../partials/layout_top.php';
 
 $labels = array_map(static fn($r) => $r['stat_date'], $byDay);
@@ -32,6 +33,9 @@ $tCounts = array_map(static fn($r) => (int)$r['order_count'], $telegramByDay);
             <h1 class="h4 mb-1">Dashboard</h1>
             <div class="text-muted small">
               Role: <?= htmlspecialchars($auth->role() ?? '-') ?>
+            </div>
+            <div class="text-muted small">
+              Sana (Smartomato): <?= htmlspecialchars($activeDate ?? '') ?>
             </div>
           </div>
           <?php if (($auth->role() ?? '') === 'admin' && !$smartomatoConfigured): ?>

@@ -16,7 +16,11 @@ final class DashboardController extends BaseController
 
         $tz = new DateTimeZone(getenv('APP_TIMEZONE') ?: 'Asia/Tashkent');
         $today = (new DateTimeImmutable('now', $tz))->format('Y-m-d');
-        $start = (new DateTimeImmutable('now', $tz))->modify('-6 day')->format('Y-m-d'); // last 7 days
+
+        // Use latest available Smartomato date (because cron imports yesterday)
+        $latest = $this->db->query('SELECT MAX(stat_date) AS d FROM smartomato_daily_stats')->fetch(PDO::FETCH_ASSOC);
+        $activeDate = (is_array($latest) && !empty($latest['d'])) ? (string)$latest['d'] : $today;
+        $start = (new DateTimeImmutable($activeDate, $tz))->modify('-6 day')->format('Y-m-d'); // last 7 days ending at activeDate
 
         // Total orders sum by day
         $stmt = $this->db->prepare('
@@ -26,10 +30,10 @@ final class DashboardController extends BaseController
             GROUP BY stat_date
             ORDER BY stat_date
         ');
-        $stmt->execute(['s' => $start, 'e' => $today]);
+        $stmt->execute(['s' => $start, 'e' => $activeDate]);
         $byDay = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // Today by channel
+        // Active date by channel
         $stmt = $this->db->prepare('
             SELECT channel, SUM(order_count) AS cnt, SUM(sum_final) AS sum_final
             FROM smartomato_daily_stats
@@ -37,10 +41,10 @@ final class DashboardController extends BaseController
             GROUP BY channel
             ORDER BY cnt DESC
         ');
-        $stmt->execute(['d' => $today]);
+        $stmt->execute(['d' => $activeDate]);
         $byChannelToday = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // Today by payment
+        // Active date by payment
         $stmt = $this->db->prepare('
             SELECT payment_source, SUM(order_count) AS cnt, SUM(sum_final) AS sum_final
             FROM smartomato_daily_stats
@@ -48,7 +52,7 @@ final class DashboardController extends BaseController
             GROUP BY payment_source
             ORDER BY cnt DESC
         ');
-        $stmt->execute(['d' => $today]);
+        $stmt->execute(['d' => $activeDate]);
         $byPaymentToday = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         // Telegram bot (manual) - last 7 days
@@ -58,11 +62,11 @@ final class DashboardController extends BaseController
             WHERE stat_date BETWEEN :s AND :e
             ORDER BY stat_date
         ');
-        $stmt->execute(['s' => $start, 'e' => $today]);
+        $stmt->execute(['s' => $start, 'e' => $activeDate]);
         $telegramByDay = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         $stmt = $this->db->prepare('SELECT order_count, sum_final FROM telegram_daily_stats WHERE stat_date = :d');
-        $stmt->execute(['d' => $today]);
+        $stmt->execute(['d' => $activeDate]);
         $telegramToday = $stmt->fetch(PDO::FETCH_ASSOC) ?: ['order_count' => 0, 'sum_final' => 0];
 
         $this->render('pages/dashboard', [
@@ -72,6 +76,7 @@ final class DashboardController extends BaseController
             'byPaymentToday' => $byPaymentToday,
             'telegramByDay' => $telegramByDay,
             'telegramToday' => $telegramToday,
+            'activeDate' => $activeDate,
         ]);
     }
 }
