@@ -51,11 +51,27 @@ final class DashboardController extends BaseController
         $stmt->execute(['d' => $today]);
         $byPaymentToday = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+        // Telegram bot (manual) - last 7 days
+        $stmt = $this->db->prepare('
+            SELECT stat_date, order_count, sum_final
+            FROM telegram_daily_stats
+            WHERE stat_date BETWEEN :s AND :e
+            ORDER BY stat_date
+        ');
+        $stmt->execute(['s' => $start, 'e' => $today]);
+        $telegramByDay = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $stmt = $this->db->prepare('SELECT order_count, sum_final FROM telegram_daily_stats WHERE stat_date = :d');
+        $stmt->execute(['d' => $today]);
+        $telegramToday = $stmt->fetch(PDO::FETCH_ASSOC) ?: ['order_count' => 0, 'sum_final' => 0];
+
         $this->render('pages/dashboard', [
             'smartomatoConfigured' => (bool)$settings->get('smartomato.login') && (bool)$settings->get('smartomato.password'),
             'byDay' => $byDay,
             'byChannelToday' => $byChannelToday,
             'byPaymentToday' => $byPaymentToday,
+            'telegramByDay' => $telegramByDay,
+            'telegramToday' => $telegramToday,
         ]);
     }
 }

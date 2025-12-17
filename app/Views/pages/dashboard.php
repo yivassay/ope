@@ -5,6 +5,8 @@
 /** @var array $byDay */
 /** @var array $byChannelToday */
 /** @var array $byPaymentToday */
+/** @var array $telegramByDay */
+/** @var array $telegramToday */
 require __DIR__ . '/../partials/layout_top.php';
 
 $labels = array_map(static fn($r) => $r['stat_date'], $byDay);
@@ -16,6 +18,9 @@ $channelCounts = array_map(static fn($r) => (int)$r['cnt'], $byChannelToday);
 
 $paymentLabels = array_map(static fn($r) => $r['payment_source'], $byPaymentToday);
 $paymentCounts = array_map(static fn($r) => (int)$r['cnt'], $byPaymentToday);
+
+$tLabels = array_map(static fn($r) => $r['stat_date'], $telegramByDay);
+$tCounts = array_map(static fn($r) => (int)$r['order_count'], $telegramByDay);
 ?>
 
 <div class="row g-3">
@@ -61,6 +66,32 @@ $paymentCounts = array_map(static fn($r) => (int)$r['cnt'], $byPaymentToday);
       </div>
     </div>
   </div>
+  <div class="col-12">
+    <div class="card">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <h2 class="h6 mb-1">Telegram bot (qo‘lda) — bugun</h2>
+            <div class="text-muted small">Smartomato summalariga qo‘shilmaydi</div>
+          </div>
+          <a class="btn btn-outline-primary btn-sm" href="/?page=telegram_bot">Kiritish</a>
+        </div>
+        <div class="row mt-3">
+          <div class="col-6">
+            <div class="text-muted small">Buyurtmalar</div>
+            <div class="fs-5 fw-semibold"><?= (int)$telegramToday['order_count'] ?></div>
+          </div>
+          <div class="col-6">
+            <div class="text-muted small">Summa</div>
+            <div class="fs-5 fw-semibold"><?= number_format((float)$telegramToday['sum_final'], 2, '.', ' ') ?></div>
+          </div>
+        </div>
+        <hr>
+        <h3 class="h6">So‘nggi 7 kun: Telegram buyurtmalar</h3>
+        <canvas id="telegramChart" height="90"></canvas>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -97,6 +128,17 @@ $paymentCounts = array_map(static fn($r) => (int)$r['cnt'], $byPaymentToday);
       indexAxis: 'y',
       plugins: {legend: {display: false}}
     }
+  });
+
+  const tLabels = <?= json_encode($tLabels, JSON_UNESCAPED_UNICODE) ?>;
+  const tCounts = <?= json_encode($tCounts, JSON_UNESCAPED_UNICODE) ?>;
+  new Chart(document.getElementById('telegramChart'), {
+    type: 'line',
+    data: {
+      labels: tLabels,
+      datasets: [{label: 'Telegram buyurtmalar', data: tCounts}]
+    },
+    options: {plugins: {legend: {display: false}}}
   });
 </script>
 
