@@ -30,6 +30,19 @@ CREATE TABLE IF NOT EXISTS operators (
   KEY idx_operators_active (is_active, name)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS operator_daily_sales (
+  sale_date DATE NOT NULL,
+  operator_id BIGINT UNSIGNED NOT NULL,
+  sales_sum DECIMAL(14,2) NOT NULL DEFAULT 0,
+  order_count INT UNSIGNED NOT NULL DEFAULT 0,
+  note VARCHAR(255) NOT NULL DEFAULT '',
+  updated_by_user_id BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (sale_date, operator_id),
+  KEY idx_operator_daily_sales_date (sale_date),
+  KEY idx_operator_daily_sales_operator (operator_id, sale_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Daily aggregates for Smartomato delivered orders (by Tashkent date)
 CREATE TABLE IF NOT EXISTS smartomato_daily_stats (
   stat_date DATE NOT NULL,

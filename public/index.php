@@ -33,6 +33,9 @@ switch ($page) {
     case 'smartomato':
         (new \App\Controllers\SmartomatoController($db, $auth))->index();
         break;
+    case 'operator_sales':
+        (new \App\Controllers\OperatorSalesController($db, $auth))->index();
+        break;
     case 'settings':
         (new \App\Controllers\SettingsController($db, $auth))->index();
         break;

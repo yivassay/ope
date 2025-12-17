@@ -5,6 +5,7 @@ return [
     'app.title' => 'Call-markaz analitikasi',
     'nav.dashboard' => 'Dashboard',
     'nav.smartomato' => 'Smartomato',
+    'nav.operator_sales' => 'Operator savdo',
     'nav.operators' => 'Operatorlar',
     'nav.settings' => 'Sozlamalar',
     'nav.logout' => 'Chiqish',
