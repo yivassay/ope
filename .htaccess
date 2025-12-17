@@ -1,0 +1,12 @@
+# GoDaddy/cPanel: set env vars for PHP (edit values)
+SetEnv APP_TIMEZONE Asia/Tashkent
+SetEnv DB_HOST localhost
+SetEnv DB_NAME your_db_name
+SetEnv DB_USER your_db_user
+SetEnv DB_PASS your_db_password
+
+# Basic hardening (deny direct access to internal folders)
+RedirectMatch 403 ^/app/.*$
+RedirectMatch 403 ^/bin/.*$
+RedirectMatch 403 ^/database/.*$
+
