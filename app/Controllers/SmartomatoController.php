@@ -5,6 +5,7 @@ namespace App\Controllers;
 
 use App\Settings;
 use App\Services\SmartomatoAggregator;
+use App\Services\SmartomatoClient;
 use DateTimeImmutable;
 use DateTimeZone;
 use PDO;
@@ -21,15 +22,141 @@ final class SmartomatoController extends BaseController
 
         $message = null;
         $error = null;
+        $debug = null;
 
         if (($_GET['action'] ?? '') === 'fetch' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $this->auth->requireRole('admin');
             $date = (string)($_POST['date'] ?? $yesterday);
             try {
                 $agg = new SmartomatoAggregator($this->db, $settings);
-                $debug = null;
-                $rows = $agg->runForDate($date, $debug);
-                $message = "OK: {$date} rows={$rows} {$debug}";
+                $debugMsg = null;
+                $rows = $agg->runForDate($date, $debugMsg);
+                $message = "OK: {$date} rows={$rows} {$debugMsg}";
+            } catch (Throwable $e) {
+                $error = $e->getMessage();
+            }
+        }
+
+        if (($_GET['action'] ?? '') === 'debug' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+            $this->auth->requireRole('admin');
+            $date = (string)($_POST['date'] ?? $yesterday);
+            try {
+                $baseUrl = $settings->get('smartomato.base_url', 'https://smartomato.ru');
+                $login = (string)$settings->get('smartomato.login', '');
+                $password = (string)$settings->get('smartomato.password', '');
+                $deliveredStatus = $settings->get('smartomato.delivered_status', 'complete');
+                $perPage = (int)($settings->get('smartomato.per_page', '100') ?: 100);
+
+                $tz = new DateTimeZone(getenv('APP_TIMEZONE') ?: 'Asia/Tashkent');
+                $dayStart = new DateTimeImmutable($date . ' 00:00:00', $tz);
+                $dayEnd = $dayStart->modify('+1 day');
+
+                $client = new SmartomatoClient((string)$baseUrl, $login, $password, 60);
+                $token = $client->createSessionToken();
+
+                $page = 1;
+                $pageCount = 1;
+                $sources = [];
+                $payments = [];
+                $takeaway = ['pickup' => 0, 'delivery' => 0];
+                $examples = [];
+                $ordersSeen = 0;
+
+                while ($page <= $pageCount) {
+                    $resp = $client->listOrders($token, [
+                        'page' => $page,
+                        'per_page' => $perPage,
+                        'status' => $deliveredStatus,
+                        'sort_by' => 'created_at',
+                    ]);
+                    $orders = $resp['orders'] ?? [];
+                    $meta = $resp['meta'] ?? [];
+                    $pageCount = (int)($meta['page_count'] ?? $pageCount);
+
+                    if (!is_array($orders)) {
+                        break;
+                    }
+
+                    $shouldStop = false;
+                    foreach ($orders as $o) {
+                        if (!is_array($o)) {
+                            continue;
+                        }
+                        $createdAt = $o['created_at'] ?? null;
+                        if (!is_string($createdAt) || $createdAt === '') {
+                            continue;
+                        }
+                        try {
+                            $created = new DateTimeImmutable($createdAt);
+                            $created = $created->setTimezone($tz);
+                        } catch (Throwable) {
+                            continue;
+                        }
+                        if ($created < $dayStart) {
+                            $shouldStop = true;
+                            continue;
+                        }
+                        if ($created >= $dayEnd) {
+                            continue;
+                        }
+
+                        $ordersSeen++;
+                        $src = (string)($o['source'] ?? 'unknown');
+                        $ps = (string)($o['payment_source'] ?? 'unknown');
+                        $sources[$src] = ($sources[$src] ?? 0) + 1;
+                        $payments[$ps] = ($payments[$ps] ?? 0) + 1;
+
+                        $isTakeaway = (bool)($o['takeaway'] ?? false);
+                        $takeaway[$isTakeaway ? 'pickup' : 'delivery']++;
+
+                        if (count($examples) < 5) {
+                            $examples[] = [
+                                'id' => (int)($o['id'] ?? 0),
+                                'created_at' => $createdAt,
+                                'restaurant_id' => (int)($o['restaurant_id'] ?? 0),
+                                'takeaway' => $isTakeaway ? 1 : 0,
+                                'source' => $src,
+                                'payment_source' => $ps,
+                                'final_sum' => (float)($o['final_sum'] ?? 0),
+                                'payment_id' => $o['payment_id'] ?? null,
+                            ];
+                        }
+                    }
+
+                    if ($shouldStop) {
+                        break;
+                    }
+                    $page++;
+                }
+
+                // Enrich examples with full order details (payments array / payment_id)
+                $details = [];
+                foreach ($examples as $ex) {
+                    if (($ex['id'] ?? 0) <= 0) continue;
+                    $full = $client->getOrder($token, (int)$ex['id']);
+                    $order = $full['order'] ?? [];
+                    $details[] = [
+                        'id' => (int)$ex['id'],
+                        'source' => $ex['source'],
+                        'payment_source' => $ex['payment_source'],
+                        'payment_id' => $order['payment_id'] ?? null,
+                        'payments_count' => is_array($full['payments'] ?? null) ? count($full['payments']) : null,
+                        'payments' => $full['payments'] ?? null,
+                    ];
+                }
+
+                arsort($sources);
+                arsort($payments);
+
+                $debug = [
+                    'date' => $date,
+                    'orders_seen' => $ordersSeen,
+                    'sources' => $sources,
+                    'payments' => $payments,
+                    'takeaway' => $takeaway,
+                    'examples' => $examples,
+                    'details' => $details,
+                ];
             } catch (Throwable $e) {
                 $error = $e->getMessage();
             }
@@ -51,6 +178,7 @@ final class SmartomatoController extends BaseController
             'smartomatoConfigured' => (bool)$settings->get('smartomato.login') && (bool)$settings->get('smartomato.password'),
             'message' => $message,
             'error' => $error,
+            'debug' => $debug,
             'runs' => $runs,
             'stats' => $stats,
         ]);

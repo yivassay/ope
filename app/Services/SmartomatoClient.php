@@ -51,6 +51,19 @@ final class SmartomatoClient
         ]);
     }
 
+    /**
+     * Returns single order response: { order: {...}, payments: [...], restaurants: [...], ... }
+     */
+    public function getOrder(string $token, int $id): array
+    {
+        $url = $this->baseUrl . '/api/orders/' . $id;
+        return $this->request('GET', $url, [
+            'headers' => [
+                'Authorization: Token token="' . $token . '"',
+            ],
+        ]);
+    }
+
     private function request(string $method, string $url, array $opts): array
     {
         $ch = curl_init($url);

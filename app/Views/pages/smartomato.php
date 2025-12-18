@@ -5,6 +5,7 @@
 /** @var bool $smartomatoConfigured */
 /** @var string|null $message */
 /** @var string|null $error */
+/** @var array|null $debug */
 /** @var array $runs */
 /** @var array $stats */
 require __DIR__ . '/../partials/layout_top.php';
@@ -48,9 +49,127 @@ require __DIR__ . '/../partials/layout_top.php';
           <div class="form-text mt-2">Bu tugma cron/SSH bo‘lmasa ham ishlaydi (admin only).</div>
         </div>
       </div>
+
+      <div class="card bg-light border-0 mb-3">
+        <div class="card-body">
+          <h2 class="h6 mb-2">Debug: source / payment_source</h2>
+          <form method="post" action="?page=smartomato&action=debug" class="row g-2 align-items-end">
+            <div class="col-12 col-lg-3">
+              <label class="form-label">Sana</label>
+              <input class="form-control" type="date" name="date" value="<?= htmlspecialchars($yesterday) ?>" required>
+            </div>
+            <div class="col-12 col-lg-3">
+              <button class="btn btn-outline-primary w-100" type="submit">Ko‘rish</button>
+            </div>
+          </form>
+          <div class="form-text mt-2">
+            Bu yerda real qiymatlar chiqadi: qaysi <code>source</code> “wolt/yandex/ios/android/board/web” ekanini aniq ko‘ramiz,
+            va <code>payment_source</code> qanday kelishini tekshiramiz (naqd/karta va boshqalar).
+          </div>
+        </div>
+      </div>
     <?php endif; ?>
   </div>
 </div>
+
+<?php if (is_array($debug ?? null)): ?>
+  <div class="row g-3 mt-0">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-body">
+          <h2 class="h6 mb-2">Debug natija: <?= htmlspecialchars((string)$debug['date']) ?> (orders_seen=<?= (int)$debug['orders_seen'] ?>)</h2>
+          <div class="row g-3">
+            <div class="col-12 col-lg-4">
+              <h3 class="h6">Delivery / Pickup</h3>
+              <ul class="mb-0">
+                <li>delivery: <?= (int)($debug['takeaway']['delivery'] ?? 0) ?></li>
+                <li>pickup: <?= (int)($debug['takeaway']['pickup'] ?? 0) ?></li>
+              </ul>
+            </div>
+            <div class="col-12 col-lg-4">
+              <h3 class="h6">source (top)</h3>
+              <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                  <thead><tr><th>source</th><th class="text-end">cnt</th></tr></thead>
+                  <tbody>
+                  <?php foreach (($debug['sources'] ?? []) as $k => $v): ?>
+                    <tr><td><code><?= htmlspecialchars((string)$k) ?></code></td><td class="text-end"><?= (int)$v ?></td></tr>
+                  <?php endforeach; ?>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div class="col-12 col-lg-4">
+              <h3 class="h6">payment_source (top)</h3>
+              <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                  <thead><tr><th>payment_source</th><th class="text-end">cnt</th></tr></thead>
+                  <tbody>
+                  <?php foreach (($debug['payments'] ?? []) as $k => $v): ?>
+                    <tr><td><code><?= htmlspecialchars((string)$k) ?></code></td><td class="text-end"><?= (int)$v ?></td></tr>
+                  <?php endforeach; ?>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <hr>
+          <h3 class="h6">Misollar (5 ta)</h3>
+          <div class="table-responsive">
+            <table class="table table-sm mb-0">
+              <thead>
+              <tr>
+                <th>ID</th>
+                <th>created_at</th>
+                <th>restaurant_id</th>
+                <th>takeaway</th>
+                <th>source</th>
+                <th>payment_source</th>
+                <th class="text-end">final_sum</th>
+                <th>payment_id(list)</th>
+              </tr>
+              </thead>
+              <tbody>
+              <?php foreach (($debug['examples'] ?? []) as $ex): ?>
+                <tr>
+                  <td><?= (int)$ex['id'] ?></td>
+                  <td class="text-muted small"><?= htmlspecialchars((string)$ex['created_at']) ?></td>
+                  <td><?= (int)$ex['restaurant_id'] ?></td>
+                  <td><?= (int)$ex['takeaway'] ?></td>
+                  <td><code><?= htmlspecialchars((string)$ex['source']) ?></code></td>
+                  <td><code><?= htmlspecialchars((string)$ex['payment_source']) ?></code></td>
+                  <td class="text-end"><?= number_format((float)$ex['final_sum'], 2, '.', ' ') ?></td>
+                  <td class="text-muted small"><?= htmlspecialchars(is_scalar($ex['payment_id']) ? (string)$ex['payment_id'] : '') ?></td>
+                </tr>
+              <?php endforeach; ?>
+              </tbody>
+            </table>
+          </div>
+
+          <hr>
+          <h3 class="h6">Order details (payments array tekshiruvi)</h3>
+          <div class="table-responsive">
+            <table class="table table-sm mb-0">
+              <thead><tr><th>ID</th><th>source</th><th>payment_source</th><th>payment_id(detail)</th><th>payments_count</th></tr></thead>
+              <tbody>
+              <?php foreach (($debug['details'] ?? []) as $d): ?>
+                <tr>
+                  <td><?= (int)$d['id'] ?></td>
+                  <td><code><?= htmlspecialchars((string)$d['source']) ?></code></td>
+                  <td><code><?= htmlspecialchars((string)$d['payment_source']) ?></code></td>
+                  <td class="text-muted small"><?= htmlspecialchars(is_scalar($d['payment_id']) ? (string)$d['payment_id'] : '') ?></td>
+                  <td><?= htmlspecialchars(is_null($d['payments_count']) ? '-' : (string)$d['payments_count']) ?></td>
+                </tr>
+              <?php endforeach; ?>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+<?php endif; ?>
 
 <div class="row g-3 mt-0">
   <div class="col-12 col-lg-6">
