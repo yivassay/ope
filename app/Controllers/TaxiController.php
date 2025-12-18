@@ -76,7 +76,7 @@ final class TaxiController extends BaseController
                         }
 
                         $time = $this->excelTimeToHms($r[$idx['time_order']] ?? '');
-                        $dt = new DateTimeImmutable($date . ' ' . ($time ?: '00:00:00'), $tz);
+                        $dt = new DateTimeImmutable($rowDate . ' ' . ($time ?: '00:00:00'), $tz);
 
                         $sender = trim((string)($r[$idx['sender_address']] ?? ''));
                         $receiver = trim((string)($r[$idx['receiver_address']] ?? ''));
@@ -93,7 +93,7 @@ final class TaxiController extends BaseController
                         $isRoundtrip = $isSuccess && $this->normalizeAddress($sender) !== '' && $this->normalizeAddress($sender) === $this->normalizeAddress($receiver);
 
                         $trips[] = [
-                            'trip_date' => $date,
+                            'trip_date' => $rowDate,
                             'trip_time' => $dt->format('Y-m-d H:i:s'),
                             'application_id' => (string)($r[$idx['application_id']] ?? ''),
                             'tariff' => (string)($r[$idx['tariff']] ?? ''),
