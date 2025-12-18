@@ -5,7 +5,7 @@ namespace App\Controllers;
 
 use App\Response;
 use App\Settings;
-use App\Services\XlsxSheetReader;
+use App\Services\CsvReader;
 use DateInterval;
 use DateTimeImmutable;
 use DateTimeZone;
@@ -31,20 +31,20 @@ final class TaxiController extends BaseController
         $error = null;
 
         if (($_GET['action'] ?? '') === 'upload' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-            if (!isset($_FILES['xlsx']) || !is_array($_FILES['xlsx'])) {
+            if (!isset($_FILES['file']) || !is_array($_FILES['file'])) {
                 $error = 'Fayl topilmadi';
             } else {
                 try {
-                    $tmp = $_FILES['xlsx']['tmp_name'] ?? '';
-                    $name = (string)($_FILES['xlsx']['name'] ?? 'taxi.xlsx');
+                    $tmp = $_FILES['file']['tmp_name'] ?? '';
+                    $name = (string)($_FILES['file']['name'] ?? 'taxi.csv');
                     if ($tmp === '' || !is_uploaded_file($tmp)) {
                         throw new RuntimeException('Fayl yuklanmadi');
                     }
 
-                    $reader = new XlsxSheetReader();
-                    $rows = $reader->readFirstSheet($tmp);
+                    $reader = new CsvReader();
+                    $rows = $reader->read($tmp);
                     if (count($rows) < 2) {
-                        throw new RuntimeException('XLSX bo‘sh yoki format noto‘g‘ri');
+                        throw new RuntimeException('CSV bo‘sh yoki format noto‘g‘ri');
                     }
 
                     $header = $rows[0];
@@ -337,17 +337,19 @@ final class TaxiController extends BaseController
     {
         $v = trim($excelValue);
         if ($v === '' || $v === '-') return null;
+        // CSV may contain already formatted dates like 2025-12-18 / 18.12.2025
+        if (!preg_match('/^\\d+(\\.\\d+)?$/', $v)) {
+            $try = strtotime($v);
+            if ($try !== false) {
+                return (new DateTimeImmutable('@' . $try))->setTimezone($tz)->format('Y-m-d');
+            }
+        }
         if (preg_match('/^\\d+(\\.\\d+)?$/', $v)) {
             // Excel serial date (days since 1899-12-30)
             $days = (int)floor((float)$v);
             $base = new DateTimeImmutable('1899-12-30 00:00:00', new DateTimeZone('UTC'));
             $dt = $base->add(new DateInterval('P' . $days . 'D'))->setTimezone($tz);
             return $dt->format('Y-m-d');
-        }
-        // If already in string format
-        $try = strtotime($v);
-        if ($try !== false) {
-            return (new DateTimeImmutable('@' . $try))->setTimezone($tz)->format('Y-m-d');
         }
         return null;
     }

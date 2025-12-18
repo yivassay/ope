@@ -45,12 +45,12 @@ foreach ($stats as $s) {
 
 <div class="card mb-3">
   <div class="card-body">
-    <h2 class="h6 mb-2">Excel yuklash</h2>
+    <h2 class="h6 mb-2">CSV yuklash</h2>
     <form method="post" action="?page=taxi&action=upload&date=<?= urlencode($date) ?>" enctype="multipart/form-data" class="row g-2 align-items-end">
       <div class="col-12 col-lg-6">
-        <label class="form-label">XLSX fayl</label>
-        <input class="form-control" type="file" name="xlsx" accept=".xlsx" required>
-        <div class="form-text">Fayl ichida bir nechta kun bo‘lsa ham bo‘ladi — tanlangan sanani filtrlab oladi.</div>
+        <label class="form-label">CSV fayl</label>
+        <input class="form-control" type="file" name="file" accept=".csv,text/csv" required>
+        <div class="form-text">CSV ruscha bo‘lsa CP1251 ham bo‘lishi mumkin — avtomatik UTF-8 ga o‘tkazamiz.</div>
       </div>
       <div class="col-12 col-lg-3">
         <button class="btn btn-primary w-100" type="submit">Yuklash va hisoblash</button>
