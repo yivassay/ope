@@ -9,7 +9,8 @@ final class CsvReader
 {
     /**
      * Reads CSV into rows (array of string columns).
-     * Auto-detects delimiter (',' vs ';') and converts CP1251 to UTF-8 if needed.
+     * Auto-detects delimiter (tab / ';' / ',') and converts to UTF-8 if needed.
+     * Supports UTF-16LE/BE (common for some Yandex exports), CP1251, UTF-8.
      *
      * @return array<int, array<int, string>>
      */
@@ -51,13 +52,35 @@ final class CsvReader
 
     private function detectDelimiter(string $headerLine): string
     {
+        $tab = substr_count($headerLine, "\t");
         $comma = substr_count($headerLine, ',');
         $semi = substr_count($headerLine, ';');
+        if ($tab >= $comma && $tab >= $semi) {
+            return "\t";
+        }
         return ($semi > $comma) ? ';' : ',';
     }
 
     private function toUtf8(string $raw): string
     {
+        // BOM-based detection first
+        if (str_starts_with($raw, "\xFF\xFE")) {
+            $converted = @iconv('UTF-16LE', 'UTF-8//IGNORE', $raw);
+            return is_string($converted) ? $converted : $raw;
+        }
+        if (str_starts_with($raw, "\xFE\xFF")) {
+            $converted = @iconv('UTF-16BE', 'UTF-8//IGNORE', $raw);
+            return is_string($converted) ? $converted : $raw;
+        }
+
+        // Heuristic: many NUL bytes often means UTF-16LE without BOM
+        if (substr_count(substr($raw, 0, 2000), "\x00") > 20) {
+            $converted = @iconv('UTF-16LE', 'UTF-8//IGNORE', $raw);
+            if (is_string($converted) && $converted !== '') {
+                return $converted;
+            }
+        }
+
         // If already valid UTF-8, keep.
         if (preg_match('//u', $raw)) {
             return $raw;
