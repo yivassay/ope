@@ -83,9 +83,10 @@ final class TaxiController extends BaseController
 
                         $paidCancel = $this->parseMoney((string)($r[$idx['paid_cancel']] ?? '0'));
                         $isSuccess = $this->isSuccessfulStatus($status);
+                        $isReturned = $this->isReturnedStatus($status);
                         $isPaidCancel = !$isSuccess && $paidCancel > 0;
-                        if (!$isSuccess && !$isPaidCancel) {
-                            continue; // we store only successful trips + paid cancellations
+                        if (!$isSuccess && !$isPaidCancel && !$isReturned) {
+                            continue; // we store only: successful trips + paid cancellations + returned
                         }
 
                         $time = $this->excelTimeToHms($r[$idx['time_order']] ?? '');
@@ -101,6 +102,7 @@ final class TaxiController extends BaseController
 
                         $sumTotal = $isSuccess ? $this->parseMoney((string)($r[$idx['sum_total']] ?? '0')) : 0.0;
                         $sumWaiting = $isSuccess ? $this->parseMoney((string)($r[$idx['sum_waiting']] ?? '0')) : 0.0;
+                        $returnedSum = $isReturned ? $this->parseMoney((string)($r[$idx['sum_total']] ?? '0')) : 0.0;
 
                         $isRoundtrip = $isSuccess && $this->normalizeAddress($sender) !== '' && $this->normalizeAddress($sender) === $this->normalizeAddress($receiver);
 
@@ -120,6 +122,8 @@ final class TaxiController extends BaseController
                             'sum_waiting' => $sumWaiting,
                             'paid_cancel_sum' => $isPaidCancel ? $paidCancel : 0.0,
                             'is_paid_cancel' => $isPaidCancel ? 1 : 0,
+                            'returned_sum' => $returnedSum,
+                            'is_returned' => $isReturned ? 1 : 0,
                             'is_roundtrip' => $isRoundtrip ? 1 : 0,
                             'is_duplicate_3h' => 0, // set later
                         ];
@@ -128,7 +132,7 @@ final class TaxiController extends BaseController
                     // Duplicate detection: same receiver more than once within 3 hours (successful trips)
                     $byReceiver = [];
                     foreach ($trips as $i => $t) {
-                        if ((int)$t['is_paid_cancel'] === 1) {
+                        if ((int)$t['is_paid_cancel'] === 1 || (int)$t['is_returned'] === 1) {
                             continue;
                         }
                         $key = $this->normalizeAddress((string)$t['receiver_address']);
@@ -154,8 +158,8 @@ final class TaxiController extends BaseController
 
                     // Insert trips
                     $insTrip = $this->db->prepare('INSERT INTO taxi_trips
-                        (trip_date, trip_time, application_id, tariff, delivery_variant, status, order_source, city, sender_address, receiver_address, restaurant_name, sum_total, sum_waiting, paid_cancel_sum, is_paid_cancel, is_roundtrip, is_duplicate_3h, created_at)
-                        VALUES (:d,:t,:id,:tar,:dv,:st,:src,:city,:sa,:ra,:rn,:sum,:wait,:pc,:ipc,:rt,:dup,NOW())');
+                        (trip_date, trip_time, application_id, tariff, delivery_variant, status, order_source, city, sender_address, receiver_address, restaurant_name, sum_total, sum_waiting, paid_cancel_sum, is_paid_cancel, returned_sum, is_returned, is_roundtrip, is_duplicate_3h, created_at)
+                        VALUES (:d,:t,:id,:tar,:dv,:st,:src,:city,:sa,:ra,:rn,:sum,:wait,:pc,:ipc,:rs,:ir,:rt,:dup,NOW())');
 
                     foreach ($trips as $t) {
                         $insTrip->execute([
@@ -174,6 +178,8 @@ final class TaxiController extends BaseController
                             'wait' => $t['sum_waiting'],
                             'pc' => $t['paid_cancel_sum'],
                             'ipc' => $t['is_paid_cancel'],
+                            'rs' => $t['returned_sum'],
+                            'ir' => $t['is_returned'],
                             'rt' => $t['is_roundtrip'],
                             'dup' => $t['is_duplicate_3h'],
                         ]);
@@ -190,6 +196,8 @@ final class TaxiController extends BaseController
                                 'sum_waiting' => 0.0,
                                 'paid_cancel_count' => 0,
                                 'paid_cancel_sum' => 0.0,
+                                'returned_count' => 0,
+                                'returned_sum' => 0.0,
                                 'roundtrip_count' => 0,
                                 'duplicate_3h_count' => 0,
                                 'duplicate_3h_sum_total' => 0.0,
@@ -198,6 +206,9 @@ final class TaxiController extends BaseController
                         if ((int)$t['is_paid_cancel'] === 1) {
                             $agg[$rn]['paid_cancel_count']++;
                             $agg[$rn]['paid_cancel_sum'] += (float)$t['paid_cancel_sum'];
+                        } elseif ((int)$t['is_returned'] === 1) {
+                            $agg[$rn]['returned_count']++;
+                            $agg[$rn]['returned_sum'] += (float)$t['returned_sum'];
                         } else {
                             $agg[$rn]['trips_count']++;
                             $agg[$rn]['sum_total'] += (float)$t['sum_total'];
@@ -211,9 +222,10 @@ final class TaxiController extends BaseController
                     }
 
                     $ins = $this->db->prepare('INSERT INTO taxi_daily_stats
-                        (stat_date, restaurant_name, trips_count, sum_total, sum_waiting, paid_cancel_count, paid_cancel_sum, roundtrip_count, duplicate_3h_count, duplicate_3h_sum_total, updated_at)
-                        VALUES (:d,:rn,:c,:sum,:wait,:pcc,:pcs,:rt,:dc,:ds,NOW())
-                        ON DUPLICATE KEY UPDATE trips_count=VALUES(trips_count), sum_total=VALUES(sum_total), sum_waiting=VALUES(sum_waiting), paid_cancel_count=VALUES(paid_cancel_count), paid_cancel_sum=VALUES(paid_cancel_sum),
+                        (stat_date, restaurant_name, trips_count, sum_total, sum_waiting, paid_cancel_count, paid_cancel_sum, returned_count, returned_sum, roundtrip_count, duplicate_3h_count, duplicate_3h_sum_total, updated_at)
+                        VALUES (:d,:rn,:c,:sum,:wait,:pcc,:pcs,:rc,:rs,:rt,:dc,:ds,NOW())
+                        ON DUPLICATE KEY UPDATE trips_count=VALUES(trips_count), sum_total=VALUES(sum_total), sum_waiting=VALUES(sum_waiting),
+                          paid_cancel_count=VALUES(paid_cancel_count), paid_cancel_sum=VALUES(paid_cancel_sum), returned_count=VALUES(returned_count), returned_sum=VALUES(returned_sum),
                           roundtrip_count=VALUES(roundtrip_count), duplicate_3h_count=VALUES(duplicate_3h_count), duplicate_3h_sum_total=VALUES(duplicate_3h_sum_total),
                           updated_at=NOW()');
 
@@ -226,6 +238,8 @@ final class TaxiController extends BaseController
                             'wait' => (float)$a['sum_waiting'],
                             'pcc' => (int)$a['paid_cancel_count'],
                             'pcs' => (float)$a['paid_cancel_sum'],
+                            'rc' => (int)$a['returned_count'],
+                            'rs' => (float)$a['returned_sum'],
                             'rt' => (int)$a['roundtrip_count'],
                             'dc' => (int)$a['duplicate_3h_count'],
                             'ds' => (float)$a['duplicate_3h_sum_total'],
@@ -337,6 +351,12 @@ final class TaxiController extends BaseController
     {
         $s = mb_strtolower(trim($status));
         return $s === 'доставлено' || $s === 'доставлен' || $s === 'заказ выполнен' || $s === 'выполнено';
+    }
+
+    private function isReturnedStatus(string $status): bool
+    {
+        $s = mb_strtolower(trim($status));
+        return $s === 'возвращена' || $s === 'возвращено' || $s === 'возврат';
     }
 
     private function headerIndex(array $header): array
