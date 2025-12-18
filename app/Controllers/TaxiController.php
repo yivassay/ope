@@ -50,19 +50,9 @@ final class TaxiController extends BaseController
                     $header = $rows[0];
                     $idx = $this->headerIndex($header);
 
-                    // Re-import: delete old data for date to avoid confusion
-                    $this->db->beginTransaction();
-                    $this->db->prepare('DELETE FROM taxi_trips WHERE trip_date = :d')->execute(['d' => $date]);
-                    $this->db->prepare('DELETE FROM taxi_daily_stats WHERE stat_date = :d')->execute(['d' => $date]);
-                    $this->db->prepare('INSERT INTO taxi_imports (import_date, original_filename, uploaded_by_user_id, status, message, created_at)
-                        VALUES (:d,:f,:u,:s,:m,NOW())
-                        ON DUPLICATE KEY UPDATE original_filename=VALUES(original_filename), uploaded_by_user_id=VALUES(uploaded_by_user_id), status=VALUES(status), message=VALUES(message), created_at=VALUES(created_at)')
-                        ->execute(['d' => $date, 'f' => $name, 'u' => (int)($this->auth->id() ?? 0), 's' => 'ok', 'm' => '']);
-
                     $trips = [];
                     $unknown = 0;
                     $datesInFile = [];
-                    $rowsForSelectedDate = 0;
                     $statusCounts = [];
                     $dateParseFailed = 0;
 
@@ -73,10 +63,6 @@ final class TaxiController extends BaseController
                             continue;
                         }
                         $datesInFile[$rowDate] = ($datesInFile[$rowDate] ?? 0) + 1;
-                        if ($rowDate !== $date) {
-                            continue; // ignore other dates in file
-                        }
-                        $rowsForSelectedDate++;
 
                         $status = trim((string)($r[$idx['status_order']] ?? ''));
                         $statusCounts[$status] = ($statusCounts[$status] ?? 0) + 1;
@@ -129,31 +115,51 @@ final class TaxiController extends BaseController
                         ];
                     }
 
-                    // Duplicate detection: same receiver more than once within 3 hours (successful trips)
-                    $byReceiver = [];
+                    // Duplicate detection: same receiver more than once within 3 hours (successful trips),
+                    // calculated per-date (so multi-date files work).
+                    $byDateIdx = [];
                     foreach ($trips as $i => $t) {
-                        if ((int)$t['is_paid_cancel'] === 1 || (int)$t['is_returned'] === 1) {
-                            continue;
-                        }
-                        $key = $this->normalizeAddress((string)$t['receiver_address']);
-                        if ($key === '') continue;
-                        $byReceiver[$key][] = $i;
+                        $byDateIdx[(string)$t['trip_date']][] = $i;
                     }
-                    foreach ($byReceiver as $idxs) {
-                        usort($idxs, function ($a, $b) use ($trips) {
-                            return strcmp((string)$trips[$a]['trip_time'], (string)$trips[$b]['trip_time']);
-                        });
-                        $prev = null;
-                        foreach ($idxs as $j) {
-                            $cur = new DateTimeImmutable((string)$trips[$j]['trip_time'], $tz);
-                            if ($prev !== null) {
-                                $diff = $cur->getTimestamp() - $prev->getTimestamp();
-                                if ($diff > 0 && $diff <= 3 * 3600) {
-                                    $trips[$j]['is_duplicate_3h'] = 1; // mark the 2nd+ trip
-                                }
+                    foreach ($byDateIdx as $d => $indexes) {
+                        $byReceiver = [];
+                        foreach ($indexes as $i) {
+                            $t = $trips[$i];
+                            if ((int)$t['is_paid_cancel'] === 1 || (int)$t['is_returned'] === 1) {
+                                continue;
                             }
-                            $prev = $cur;
+                            $key = $this->normalizeAddress((string)$t['receiver_address']);
+                            if ($key === '') continue;
+                            $byReceiver[$key][] = $i;
                         }
+                        foreach ($byReceiver as $idxs) {
+                            usort($idxs, function ($a, $b) use ($trips) {
+                                return strcmp((string)$trips[$a]['trip_time'], (string)$trips[$b]['trip_time']);
+                            });
+                            $prev = null;
+                            foreach ($idxs as $j) {
+                                $cur = new DateTimeImmutable((string)$trips[$j]['trip_time'], $tz);
+                                if ($prev !== null) {
+                                    $diff = $cur->getTimestamp() - $prev->getTimestamp();
+                                    if ($diff > 0 && $diff <= 3 * 3600) {
+                                        $trips[$j]['is_duplicate_3h'] = 1; // mark the 2nd+ trip
+                                    }
+                                }
+                                $prev = $cur;
+                            }
+                        }
+                    }
+
+                    // Re-import: delete old data for ALL dates present in the file to avoid confusion
+                    $this->db->beginTransaction();
+                    $datesToRefresh = array_keys($datesInFile);
+                    foreach ($datesToRefresh as $d) {
+                        $this->db->prepare('DELETE FROM taxi_trips WHERE trip_date = :d')->execute(['d' => $d]);
+                        $this->db->prepare('DELETE FROM taxi_daily_stats WHERE stat_date = :d')->execute(['d' => $d]);
+                        $this->db->prepare('INSERT INTO taxi_imports (import_date, original_filename, uploaded_by_user_id, status, message, created_at)
+                            VALUES (:d,:f,:u,:s,:m,NOW())
+                            ON DUPLICATE KEY UPDATE original_filename=VALUES(original_filename), uploaded_by_user_id=VALUES(uploaded_by_user_id), status=VALUES(status), message=VALUES(message), created_at=VALUES(created_at)')
+                            ->execute(['d' => $d, 'f' => $name, 'u' => (int)($this->auth->id() ?? 0), 's' => 'ok', 'm' => 'refreshing']);
                     }
 
                     // Insert trips
@@ -185,12 +191,14 @@ final class TaxiController extends BaseController
                         ]);
                     }
 
-                    // Aggregate per restaurant
-                    $agg = [];
+                    // Aggregate per restaurant per date
+                    $agg = []; // [date][restaurant] => stats
                     foreach ($trips as $t) {
+                        $d = (string)$t['trip_date'];
                         $rn = (string)$t['restaurant_name'];
-                        if (!isset($agg[$rn])) {
-                            $agg[$rn] = [
+                        if (!isset($agg[$d])) $agg[$d] = [];
+                        if (!isset($agg[$d][$rn])) {
+                            $agg[$d][$rn] = [
                                 'trips_count' => 0,
                                 'sum_total' => 0.0,
                                 'sum_waiting' => 0.0,
@@ -204,19 +212,19 @@ final class TaxiController extends BaseController
                             ];
                         }
                         if ((int)$t['is_paid_cancel'] === 1) {
-                            $agg[$rn]['paid_cancel_count']++;
-                            $agg[$rn]['paid_cancel_sum'] += (float)$t['paid_cancel_sum'];
+                            $agg[$d][$rn]['paid_cancel_count']++;
+                            $agg[$d][$rn]['paid_cancel_sum'] += (float)$t['paid_cancel_sum'];
                         } elseif ((int)$t['is_returned'] === 1) {
-                            $agg[$rn]['returned_count']++;
-                            $agg[$rn]['returned_sum'] += (float)$t['returned_sum'];
+                            $agg[$d][$rn]['returned_count']++;
+                            $agg[$d][$rn]['returned_sum'] += (float)$t['returned_sum'];
                         } else {
-                            $agg[$rn]['trips_count']++;
-                            $agg[$rn]['sum_total'] += (float)$t['sum_total'];
-                            $agg[$rn]['sum_waiting'] += (float)$t['sum_waiting'];
-                            $agg[$rn]['roundtrip_count'] += (int)$t['is_roundtrip'];
+                            $agg[$d][$rn]['trips_count']++;
+                            $agg[$d][$rn]['sum_total'] += (float)$t['sum_total'];
+                            $agg[$d][$rn]['sum_waiting'] += (float)$t['sum_waiting'];
+                            $agg[$d][$rn]['roundtrip_count'] += (int)$t['is_roundtrip'];
                             if ((int)$t['is_duplicate_3h'] === 1) {
-                                $agg[$rn]['duplicate_3h_count']++;
-                                $agg[$rn]['duplicate_3h_sum_total'] += (float)$t['sum_total'];
+                                $agg[$d][$rn]['duplicate_3h_count']++;
+                                $agg[$d][$rn]['duplicate_3h_sum_total'] += (float)$t['sum_total'];
                             }
                         }
                     }
@@ -229,47 +237,35 @@ final class TaxiController extends BaseController
                           roundtrip_count=VALUES(roundtrip_count), duplicate_3h_count=VALUES(duplicate_3h_count), duplicate_3h_sum_total=VALUES(duplicate_3h_sum_total),
                           updated_at=NOW()');
 
-                    foreach ($agg as $rn => $a) {
-                        $ins->execute([
-                            'd' => $date,
-                            'rn' => $rn,
-                            'c' => (int)$a['trips_count'],
-                            'sum' => (float)$a['sum_total'],
-                            'wait' => (float)$a['sum_waiting'],
-                            'pcc' => (int)$a['paid_cancel_count'],
-                            'pcs' => (float)$a['paid_cancel_sum'],
-                            'rc' => (int)$a['returned_count'],
-                            'rs' => (float)$a['returned_sum'],
-                            'rt' => (int)$a['roundtrip_count'],
-                            'dc' => (int)$a['duplicate_3h_count'],
-                            'ds' => (float)$a['duplicate_3h_sum_total'],
-                        ]);
-                    }
-
-                    $msg = 'trips=' . count($trips) . ', restaurants=' . count($agg) . ', unknown=' . $unknown;
-                    if (count($trips) === 0) {
-                        arsort($datesInFile);
-                        $topDates = array_slice($datesInFile, 0, 5, true);
-                        $topStatuses = $statusCounts;
-                        arsort($topStatuses);
-                        $topStatuses = array_slice($topStatuses, 0, 5, true);
-
-                        $msg .= '; selected_date_rows=' . $rowsForSelectedDate;
-                        $msg .= '; file_dates_top=' . implode(', ', array_map(
-                            static fn($k, $v) => "{$k}({$v})",
-                            array_keys($topDates),
-                            array_values($topDates)
-                        ));
-                        $msg .= '; status_top=' . implode(', ', array_map(
-                            static fn($k, $v) => "{$k}({$v})",
-                            array_keys($topStatuses),
-                            array_values($topStatuses)
-                        ));
-                        if ($dateParseFailed > 0) {
-                            $msg .= '; date_parse_failed=' . $dateParseFailed;
+                    $restaurantCountTotal = 0;
+                    foreach ($agg as $d => $byR) {
+                        $restaurantCountTotal += count($byR);
+                        foreach ($byR as $rn => $a) {
+                            $ins->execute([
+                                'd' => $d,
+                                'rn' => $rn,
+                                'c' => (int)$a['trips_count'],
+                                'sum' => (float)$a['sum_total'],
+                                'wait' => (float)$a['sum_waiting'],
+                                'pcc' => (int)$a['paid_cancel_count'],
+                                'pcs' => (float)$a['paid_cancel_sum'],
+                                'rc' => (int)$a['returned_count'],
+                                'rs' => (float)$a['returned_sum'],
+                                'rt' => (int)$a['roundtrip_count'],
+                                'dc' => (int)$a['duplicate_3h_count'],
+                                'ds' => (float)$a['duplicate_3h_sum_total'],
+                            ]);
                         }
                     }
-                    $this->db->prepare('UPDATE taxi_imports SET status="ok", message=:m WHERE import_date=:d')->execute(['m' => $msg, 'd' => $date]);
+
+                    $msg = 'dates=' . count($datesInFile) . ', records=' . count($trips) . ', restaurants=' . $restaurantCountTotal . ', unknown=' . $unknown;
+                    if ($dateParseFailed > 0) {
+                        $msg .= '; date_parse_failed=' . $dateParseFailed;
+                    }
+                    // Write message per date
+                    foreach (array_keys($datesInFile) as $d) {
+                        $this->db->prepare('UPDATE taxi_imports SET status="ok", message=:m WHERE import_date=:d')->execute(['m' => $msg, 'd' => $d]);
+                    }
 
                     $this->db->commit();
 
