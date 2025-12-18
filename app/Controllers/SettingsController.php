@@ -29,6 +29,9 @@ final class SettingsController extends BaseController
             $settings->set('commission.wolt', trim((string)($_POST['commission_wolt'] ?? '0')));
             $settings->set('commission.uzum', trim((string)($_POST['commission_uzum'] ?? '0')));
 
+            // Taxi: restaurant keywords mapping
+            $settings->set('taxi.restaurant_keywords', trim((string)($_POST['taxi_restaurant_keywords'] ?? '')));
+
             $saved = true;
         }
 
@@ -44,6 +47,7 @@ final class SettingsController extends BaseController
                 'commission_yandex' => $settings->get('commission.yandex', '0'),
                 'commission_wolt' => $settings->get('commission.wolt', '0'),
                 'commission_uzum' => $settings->get('commission.uzum', '0'),
+                'taxi_restaurant_keywords' => $settings->get('taxi.restaurant_keywords', ''),
             ],
         ]);
     }

@@ -20,6 +20,7 @@
         <li class="nav-item"><a class="nav-link" href="?page=dashboard"><?= htmlspecialchars($t->t('nav.dashboard')) ?></a></li>
         <li class="nav-item"><a class="nav-link" href="?page=smartomato"><?= htmlspecialchars($t->t('nav.smartomato')) ?></a></li>
         <li class="nav-item"><a class="nav-link" href="?page=others"><?= htmlspecialchars($t->t('nav.others', 'Boshqalar')) ?></a></li>
+        <li class="nav-item"><a class="nav-link" href="?page=taxi"><?= htmlspecialchars($t->t('nav.taxi', 'Taxi')) ?></a></li>
         <li class="nav-item"><a class="nav-link" href="?page=operator_sales"><?= htmlspecialchars($t->t('nav.operator_sales', 'Operator savdo')) ?></a></li>
         <li class="nav-item"><a class="nav-link" href="?page=operators"><?= htmlspecialchars($t->t('nav.operators')) ?></a></li>
         <?php if (($auth->role() ?? '') === 'admin'): ?>

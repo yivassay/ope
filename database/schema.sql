@@ -88,3 +88,52 @@ CREATE TABLE IF NOT EXISTS smartomato_runs (
   PRIMARY KEY (run_date)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Taxi (Yandex) daily stats and import details
+CREATE TABLE IF NOT EXISTS taxi_imports (
+  import_date DATE NOT NULL,
+  original_filename VARCHAR(255) NOT NULL DEFAULT '',
+  uploaded_by_user_id BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  status ENUM('ok','error') NOT NULL DEFAULT 'ok',
+  message VARCHAR(1000) NOT NULL DEFAULT '',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (import_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS taxi_trips (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  trip_date DATE NOT NULL,
+  trip_time DATETIME NULL,
+  application_id VARCHAR(64) NOT NULL DEFAULT '', -- ID заявки
+  tariff VARCHAR(100) NOT NULL DEFAULT '',
+  delivery_variant VARCHAR(100) NOT NULL DEFAULT '',
+  status VARCHAR(100) NOT NULL DEFAULT '',
+  order_source VARCHAR(100) NOT NULL DEFAULT '',
+  city VARCHAR(100) NOT NULL DEFAULT '',
+  sender_address VARCHAR(500) NOT NULL DEFAULT '',
+  receiver_address VARCHAR(500) NOT NULL DEFAULT '',
+  restaurant_name VARCHAR(190) NOT NULL DEFAULT 'Unknown',
+  sum_total DECIMAL(14,2) NOT NULL DEFAULT 0,
+  sum_waiting DECIMAL(14,2) NOT NULL DEFAULT 0,
+  is_roundtrip TINYINT(1) NOT NULL DEFAULT 0,
+  is_duplicate_3h TINYINT(1) NOT NULL DEFAULT 0,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_taxi_trips_date (trip_date),
+  KEY idx_taxi_trips_restaurant (restaurant_name, trip_date),
+  KEY idx_taxi_trips_receiver (trip_date, receiver_address(150))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS taxi_daily_stats (
+  stat_date DATE NOT NULL,
+  restaurant_name VARCHAR(190) NOT NULL,
+  trips_count INT UNSIGNED NOT NULL DEFAULT 0,
+  sum_total DECIMAL(14,2) NOT NULL DEFAULT 0,
+  sum_waiting DECIMAL(14,2) NOT NULL DEFAULT 0,
+  roundtrip_count INT UNSIGNED NOT NULL DEFAULT 0,
+  duplicate_3h_count INT UNSIGNED NOT NULL DEFAULT 0,
+  duplicate_3h_sum_total DECIMAL(14,2) NOT NULL DEFAULT 0,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (stat_date, restaurant_name),
+  KEY idx_taxi_stats_date (stat_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+

@@ -62,6 +62,15 @@ require __DIR__ . '/../partials/layout_top.php';
         </div>
       </div>
 
+      <h2 class="h6 mt-4">Taxi (restaurant adres keyword)</h2>
+      <div class="row g-3">
+        <div class="col-12">
+          <label class="form-label">Restaurant mapping</label>
+          <textarea class="form-control" name="taxi_restaurant_keywords" rows="6" placeholder="Mahmood Kebab #1|хадра, массив хадра, 1&#10;Mahmood Kebab #2|кадирий, абдуллы кадыри"><?= htmlspecialchars((string)$smartomato['taxi_restaurant_keywords']) ?></textarea>
+          <div class="form-text">Format: har qatorda <code>Restaurant nomi|keyword1, keyword2</code>. Keyword “Адрес отправителя” ichida chiqsa shu restaurantga yoziladi.</div>
+        </div>
+      </div>
+
       <div class="mt-3">
         <button class="btn btn-primary" type="submit">Saqlash</button>
       </div>
