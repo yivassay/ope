@@ -144,6 +144,11 @@ final class SmartomatoAggregator
                 ON DUPLICATE KEY UPDATE status=VALUES(status), message=VALUES(message), created_at=VALUES(created_at)');
             $stmt->execute(['d' => $targetDate, 's' => 'running', 'm' => $debugMessage]);
 
+            // Important: if we re-import a date, we must remove old aggregates first.
+            // Otherwise old rows can remain (e.g. if a channel/payment combo disappears), causing confusion.
+            $del = $this->db->prepare('DELETE FROM smartomato_daily_stats WHERE stat_date = :d');
+            $del->execute(['d' => $targetDate]);
+
             $ins = $this->db->prepare('INSERT INTO smartomato_daily_stats
                 (stat_date, restaurant_id, delivery_type, channel, payment_source, order_count, sum_final, updated_at)
                 VALUES (:d,:r,:dt,:ch,:ps,:c,:sf,NOW())
