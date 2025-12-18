@@ -61,15 +61,27 @@ final class TaxiController extends BaseController
 
                     $trips = [];
                     $unknown = 0;
+                    $datesInFile = [];
+                    $rowsForSelectedDate = 0;
+                    $statusCounts = [];
+                    $dateParseFailed = 0;
 
                     foreach (array_slice($rows, 1) as $r) {
                         $rowDate = $this->excelDateToYmd($r[$idx['date_order']] ?? '', $tz);
+                        if ($rowDate === null) {
+                            $dateParseFailed++;
+                            continue;
+                        }
+                        $datesInFile[$rowDate] = ($datesInFile[$rowDate] ?? 0) + 1;
                         if ($rowDate !== $date) {
                             continue; // ignore other dates in file
                         }
+                        $rowsForSelectedDate++;
 
                         $status = trim((string)($r[$idx['status_order']] ?? ''));
-                        $paidCancel = (float)($r[$idx['paid_cancel']] ?? 0);
+                        $statusCounts[$status] = ($statusCounts[$status] ?? 0) + 1;
+
+                        $paidCancel = $this->parseMoney((string)($r[$idx['paid_cancel']] ?? '0'));
                         $isSuccess = $this->isSuccessfulStatus($status);
                         $isPaidCancel = !$isSuccess && $paidCancel > 0;
                         if (!$isSuccess && !$isPaidCancel) {
@@ -87,8 +99,8 @@ final class TaxiController extends BaseController
                             $unknown++;
                         }
 
-                        $sumTotal = $isSuccess ? (float)($r[$idx['sum_total']] ?? 0) : 0.0;
-                        $sumWaiting = $isSuccess ? (float)($r[$idx['sum_waiting']] ?? 0) : 0.0;
+                        $sumTotal = $isSuccess ? $this->parseMoney((string)($r[$idx['sum_total']] ?? '0')) : 0.0;
+                        $sumWaiting = $isSuccess ? $this->parseMoney((string)($r[$idx['sum_waiting']] ?? '0')) : 0.0;
 
                         $isRoundtrip = $isSuccess && $this->normalizeAddress($sender) !== '' && $this->normalizeAddress($sender) === $this->normalizeAddress($receiver);
 
@@ -221,6 +233,28 @@ final class TaxiController extends BaseController
                     }
 
                     $msg = 'trips=' . count($trips) . ', restaurants=' . count($agg) . ', unknown=' . $unknown;
+                    if (count($trips) === 0) {
+                        arsort($datesInFile);
+                        $topDates = array_slice($datesInFile, 0, 5, true);
+                        $topStatuses = $statusCounts;
+                        arsort($topStatuses);
+                        $topStatuses = array_slice($topStatuses, 0, 5, true);
+
+                        $msg .= '; selected_date_rows=' . $rowsForSelectedDate;
+                        $msg .= '; file_dates_top=' . implode(', ', array_map(
+                            static fn($k, $v) => "{$k}({$v})",
+                            array_keys($topDates),
+                            array_values($topDates)
+                        ));
+                        $msg .= '; status_top=' . implode(', ', array_map(
+                            static fn($k, $v) => "{$k}({$v})",
+                            array_keys($topStatuses),
+                            array_values($topStatuses)
+                        ));
+                        if ($dateParseFailed > 0) {
+                            $msg .= '; date_parse_failed=' . $dateParseFailed;
+                        }
+                    }
                     $this->db->prepare('UPDATE taxi_imports SET status="ok", message=:m WHERE import_date=:d')->execute(['m' => $msg, 'd' => $date]);
 
                     $this->db->commit();
@@ -424,6 +458,17 @@ final class TaxiController extends BaseController
             return strlen($v) === 5 ? ($v . ':00') : $v;
         }
         return null;
+    }
+
+    private function parseMoney(string $v): float
+    {
+        $v = trim($v);
+        if ($v === '' || $v === '-') return 0.0;
+        // remove spaces and currency artifacts
+        $v = str_replace(["\xC2\xA0", ' '], '', $v); // NBSP and spaces
+        // decimal comma -> dot
+        $v = str_replace(',', '.', $v);
+        return (float)$v;
     }
 }
 
