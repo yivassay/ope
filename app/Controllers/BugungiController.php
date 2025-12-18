@@ -169,15 +169,19 @@ final class BugungiController extends BaseController
 
         // Errors (day)
         $err = ['cnt' => 0, 'sum' => 0.0];
-        $q = 'SELECT COUNT(*) AS cnt, COALESCE(SUM(amount),0) AS sum FROM delivery_errors WHERE error_date=:d';
-        $params = ['d' => $date];
-        if ($restaurantId > 0) {
-            $q .= ' AND target_type="restaurant" AND restaurant_id=:rid';
-            $params['rid'] = $restaurantId;
+        try {
+            $q = 'SELECT COUNT(*) AS cnt, COALESCE(SUM(amount),0) AS sum FROM delivery_errors WHERE error_date=:d';
+            $params = ['d' => $date];
+            if ($restaurantId > 0) {
+                $q .= ' AND target_type="restaurant" AND restaurant_id=:rid';
+                $params['rid'] = $restaurantId;
+            }
+            $stmt = $this->db->prepare($q);
+            $stmt->execute($params);
+            $err = $stmt->fetch(PDO::FETCH_ASSOC) ?: $err;
+        } catch (Throwable) {
+            $err = ['cnt' => 0, 'sum' => 0.0];
         }
-        $stmt = $this->db->prepare($q);
-        $stmt->execute($params);
-        $err = $stmt->fetch(PDO::FETCH_ASSOC) ?: $err;
 
         // Orders by channel (day) with calls=board-telegram and plus telegram/uzum
         $q = '

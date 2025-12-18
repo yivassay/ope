@@ -71,36 +71,44 @@ final class DashboardController extends BaseController
 
         // Expenses dynamics
         // Salaries: fixed + percent(sales_sum)
-        $fixedTotal = (float)($this->db->query('SELECT COALESCE(SUM(fixed_salary),0) AS s FROM operators WHERE is_active=1')->fetch(PDO::FETCH_ASSOC)['s'] ?? 0);
-        $stmt = $this->db->prepare('
-            SELECT sale_date, COALESCE(SUM(ods.sales_sum * o.percent_rate / 100.0),0) AS pct_sum
-            FROM operator_daily_sales ods
-            JOIN operators o ON o.id = ods.operator_id
-            WHERE ods.sale_date BETWEEN :s AND :e
-            GROUP BY sale_date
-            ORDER BY sale_date
-        ');
-        $stmt->execute(['s' => $from, 'e' => $to]);
-        $pctRows = $stmt->fetchAll(PDO::FETCH_ASSOC);
         $salaryByDate = [];
-        foreach ($pctRows as $r) {
-            $d = (string)$r['sale_date'];
-            $salaryByDate[$d] = ['salary' => $fixedTotal + (float)($r['pct_sum'] ?? 0)];
+        try {
+            $fixedTotal = (float)($this->db->query('SELECT COALESCE(SUM(fixed_salary),0) AS s FROM operators WHERE is_active=1')->fetch(PDO::FETCH_ASSOC)['s'] ?? 0);
+            $stmt = $this->db->prepare('
+                SELECT sale_date, COALESCE(SUM(ods.sales_sum * o.percent_rate / 100.0),0) AS pct_sum
+                FROM operator_daily_sales ods
+                JOIN operators o ON o.id = ods.operator_id
+                WHERE ods.sale_date BETWEEN :s AND :e
+                GROUP BY sale_date
+                ORDER BY sale_date
+            ');
+            $stmt->execute(['s' => $from, 'e' => $to]);
+            $pctRows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($pctRows as $r) {
+                $d = (string)$r['sale_date'];
+                $salaryByDate[$d] = ['salary' => $fixedTotal + (float)($r['pct_sum'] ?? 0)];
+            }
+        } catch (\Throwable) {
+            $salaryByDate = [];
         }
 
         // Taxi costs per day (Yandex + paid cancel + returned) + Millennium
-        $stmt = $this->db->prepare('
-            SELECT stat_date, COALESCE(SUM(sum_total + paid_cancel_sum + returned_sum),0) AS taxi_sum
-            FROM taxi_daily_stats
-            WHERE stat_date BETWEEN :s AND :e
-            GROUP BY stat_date
-            ORDER BY stat_date
-        ');
-        $stmt->execute(['s' => $from, 'e' => $to]);
-        $taxiRows = $stmt->fetchAll(PDO::FETCH_ASSOC);
         $taxiByDate = [];
-        foreach ($taxiRows as $r) {
-            $taxiByDate[(string)$r['stat_date']] = ['taxi' => (float)($r['taxi_sum'] ?? 0)];
+        try {
+            $stmt = $this->db->prepare('
+                SELECT stat_date, COALESCE(SUM(sum_total + paid_cancel_sum + returned_sum),0) AS taxi_sum
+                FROM taxi_daily_stats
+                WHERE stat_date BETWEEN :s AND :e
+                GROUP BY stat_date
+                ORDER BY stat_date
+            ');
+            $stmt->execute(['s' => $from, 'e' => $to]);
+            $taxiRows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($taxiRows as $r) {
+                $taxiByDate[(string)$r['stat_date']] = ['taxi' => (float)($r['taxi_sum'] ?? 0)];
+            }
+        } catch (\Throwable) {
+            $taxiByDate = [];
         }
         $millByDate = [];
         try {
@@ -120,17 +128,21 @@ final class DashboardController extends BaseController
         }
 
         // Errors per day (amount)
-        $stmt = $this->db->prepare('
-            SELECT error_date, COALESCE(SUM(amount),0) AS err_sum
-            FROM delivery_errors
-            WHERE error_date BETWEEN :s AND :e
-            GROUP BY error_date
-            ORDER BY error_date
-        ');
-        $stmt->execute(['s' => $from, 'e' => $to]);
         $errByDate = [];
-        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
-            $errByDate[(string)$r['error_date']] = ['errors' => (float)($r['err_sum'] ?? 0)];
+        try {
+            $stmt = $this->db->prepare('
+                SELECT error_date, COALESCE(SUM(amount),0) AS err_sum
+                FROM delivery_errors
+                WHERE error_date BETWEEN :s AND :e
+                GROUP BY error_date
+                ORDER BY error_date
+            ');
+            $stmt->execute(['s' => $from, 'e' => $to]);
+            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+                $errByDate[(string)$r['error_date']] = ['errors' => (float)($r['err_sum'] ?? 0)];
+            }
+        } catch (\Throwable) {
+            $errByDate = [];
         }
 
         // Aggregators dynamics: yandex, wolt from Smartomato + uzum manual
