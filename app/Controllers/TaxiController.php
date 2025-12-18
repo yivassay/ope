@@ -307,30 +307,81 @@ final class TaxiController extends BaseController
 
     private function headerIndex(array $header): array
     {
+        // CSV headers often differ: extra spaces, BOM, quotes, minor wording changes.
+        // We match using normalized headers + aliases + "contains" fallback.
         $need = [
-            'application_id' => 'ID заявки',
-            'tariff' => 'Тариф',
-            'delivery_variant' => 'Вариант доставки',
-            'status_order' => 'Статус заказа',
-            'order_source' => 'Источник заказа',
-            'date_order' => 'Дата заказа',
-            'time_order' => 'Время заказа',
-            'city' => 'Населённый пункт',
-            'sender_address' => 'Адрес отправителя',
-            'receiver_address' => 'Адреса получателей',
-            'sum_total' => 'Фактическая стоимость заявки с НДС сум',
-            'sum_waiting' => 'Стоимость платного ожидания итого  сум',
-            'paid_cancel' => 'Платная отмена до прибытия курьера',
+            'application_id' => ['ID заявки', 'ID', 'id заявки', 'id'],
+            'tariff' => ['Тариф', 'tariff'],
+            'delivery_variant' => ['Вариант доставки', 'вариант доставки'],
+            'status_order' => ['Статус заказа', 'статус заказа', 'статус'],
+            'order_source' => ['Источник заказа', 'источник заказа', 'source'],
+            'date_order' => ['Дата заказа', 'дата заказа', 'Дата'],
+            'time_order' => ['Время заказа', 'время заказа', 'Время'],
+            'city' => ['Населённый пункт', 'населенный пункт', 'город'],
+            'sender_address' => ['Адрес отправителя', 'адрес отправителя'],
+            'receiver_address' => ['Адреса получателей', 'адреса получателей', 'адрес получателя', 'Адрес получателя'],
+            'sum_total' => ['Фактическая стоимость заявки с НДС сум', 'Фактическая стоимость заявки с НДС', 'стоимость заявки с ндс'],
+            'sum_waiting' => ['Стоимость платного ожидания итого  сум', 'Стоимость платного ожидания итого сум', 'стоимость платного ожидания'],
+            'paid_cancel' => ['Платная отмена до прибытия курьера', 'платная отмена'],
         ];
+
         $idx = [];
-        foreach ($need as $k => $label) {
-            $i = array_search($label, $header, true);
-            if ($i === false) {
-                throw new RuntimeException('Ustun topilmadi: ' . $label);
-            }
-            $idx[$k] = (int)$i;
+        foreach ($need as $k => $candidates) {
+            $idx[$k] = $this->findHeaderIndex($header, $candidates);
         }
         return $idx;
+    }
+
+    private function findHeaderIndex(array $header, array $candidates): int
+    {
+        $normHeader = [];
+        foreach ($header as $i => $h) {
+            $normHeader[$this->normHeader((string)$h)] = (int)$i;
+        }
+
+        // 1) exact normalized match against aliases
+        foreach ($candidates as $cand) {
+            $n = $this->normHeader((string)$cand);
+            if ($n !== '' && array_key_exists($n, $normHeader)) {
+                return (int)$normHeader[$n];
+            }
+        }
+
+        // 2) "contains" match (first match wins), useful when export adds units or wording
+        $headerList = array_map(static fn($h) => (string)$h, $header);
+        $normList = array_map(fn($h) => $this->normHeader($h), $headerList);
+
+        foreach ($candidates as $cand) {
+            $n = $this->normHeader((string)$cand);
+            if ($n === '') continue;
+            $found = null;
+            foreach ($normList as $i => $h) {
+                if ($h !== '' && mb_strpos($h, $n) !== false) {
+                    $found = $i;
+                    break;
+                }
+            }
+            if ($found !== null) {
+                return (int)$found;
+            }
+        }
+
+        $sample = array_slice($headerList, 0, 20);
+        throw new RuntimeException(
+            'Ustun topilmadi. Qidirildi: ' . implode(' / ', array_map('strval', $candidates)) .
+            '. Header (first 20): ' . implode(' | ', $sample)
+        );
+    }
+
+    private function normHeader(string $s): string
+    {
+        $s = preg_replace('/^\\xEF\\xBB\\xBF/', '', $s) ?? $s;
+        $s = mb_strtolower($s);
+        $s = trim($s);
+        $s = preg_replace('/\\s+/u', ' ', $s) ?? $s;
+        $s = str_replace(["\u{00A0}"], ' ', $s); // NBSP
+        $s = trim($s);
+        return $s;
     }
 
     private function excelDateToYmd(string $excelValue, DateTimeZone $tz): ?string
