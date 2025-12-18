@@ -4,6 +4,8 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Settings;
+use App\Response;
+use Throwable;
 
 final class SettingsController extends BaseController
 {
@@ -14,6 +16,46 @@ final class SettingsController extends BaseController
         $settings = new Settings($this->db);
 
         $saved = false;
+        $wiped = false;
+        $wipeError = null;
+
+        if (($_GET['action'] ?? '') === 'wipe' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+            $confirm = trim((string)($_POST['confirm_text'] ?? ''));
+            if ($confirm !== 'DELETE') {
+                $wipeError = 'Tasdiqlash uchun DELETE deb yozing';
+            } else {
+                try {
+                    $this->db->beginTransaction();
+                    // Keep users/settings/operators. Wipe only analytics and imported data.
+                    $tables = [
+                        'smartomato_daily_stats',
+                        'smartomato_runs',
+                        'operator_daily_sales',
+                        'telegram_daily_stats',
+                        'uzum_daily_stats',
+                        'taxi_imports',
+                        'taxi_trips',
+                        'taxi_daily_stats',
+                        'millennium_taxi_daily_stats',
+                    ];
+                    foreach ($tables as $t) {
+                        try {
+                            $this->db->exec('DELETE FROM `' . $t . '`');
+                        } catch (Throwable) {
+                            // some installations may not have all optional tables yet
+                        }
+                    }
+                    $this->db->commit();
+                    $wiped = true;
+                } catch (Throwable $e) {
+                    if ($this->db->inTransaction()) {
+                        $this->db->rollBack();
+                    }
+                    $wipeError = $e->getMessage();
+                }
+            }
+        }
+
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $settings->set('smartomato.base_url', trim((string)($_POST['smartomato_base_url'] ?? 'https://smartomato.ru')));
             $settings->set('smartomato.login', trim((string)($_POST['smartomato_login'] ?? '')));
@@ -37,6 +79,8 @@ final class SettingsController extends BaseController
 
         $this->render('pages/settings', [
             'saved' => $saved,
+            'wiped' => $wiped,
+            'wipeError' => $wipeError,
             'smartomato' => [
                 'base_url' => $settings->get('smartomato.base_url', 'https://smartomato.ru'),
                 'login' => $settings->get('smartomato.login', ''),
