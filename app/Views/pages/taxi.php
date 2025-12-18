@@ -13,10 +13,14 @@ require __DIR__ . '/../partials/layout_top.php';
 $totalTrips = 0;
 $totalSum = 0.0;
 $totalWaiting = 0.0;
+$totalPaidCancelCnt = 0;
+$totalPaidCancelSum = 0.0;
 foreach ($stats as $s) {
     $totalTrips += (int)$s['trips_count'];
     $totalSum += (float)$s['sum_total'];
     $totalWaiting += (float)$s['sum_waiting'];
+    $totalPaidCancelCnt += (int)($s['paid_cancel_count'] ?? 0);
+    $totalPaidCancelSum += (float)($s['paid_cancel_sum'] ?? 0);
 }
 ?>
 
@@ -82,7 +86,8 @@ foreach ($stats as $s) {
     <div class="card">
       <div class="card-body py-3">
         <div class="text-muted small">Summa (jami)</div>
-        <div class="fs-5 fw-semibold"><?= number_format($totalSum, 2, '.', ' ') ?></div>
+        <div class="fs-5 fw-semibold"><?= number_format($totalSum + $totalPaidCancelSum, 2, '.', ' ') ?></div>
+        <div class="text-muted small">(+ платная отмена)</div>
       </div>
     </div>
   </div>
@@ -91,6 +96,15 @@ foreach ($stats as $s) {
       <div class="card-body py-3">
         <div class="text-muted small">Pulatli kutish (jami)</div>
         <div class="fs-5 fw-semibold"><?= number_format($totalWaiting, 2, '.', ' ') ?></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card">
+      <div class="card-body py-3">
+        <div class="text-muted small">Платная отмена</div>
+        <div class="fs-5 fw-semibold"><?= number_format($totalPaidCancelCnt, 0, '.', ' ') ?></div>
+        <div class="text-muted small"><?= number_format($totalPaidCancelSum, 2, '.', ' ') ?></div>
       </div>
     </div>
   </div>
@@ -123,6 +137,8 @@ foreach ($stats as $s) {
               <th class="text-end">Po‘ezdka</th>
               <th class="text-end">Summa</th>
               <th class="text-end">Kutish</th>
+              <th class="text-end">Платная отмена</th>
+              <th class="text-end">Отмена сумма</th>
               <th class="text-end">Tuda-obratno</th>
               <th class="text-end">Ikki marta</th>
               <th class="text-end">Ikki marta summa</th>
@@ -135,13 +151,15 @@ foreach ($stats as $s) {
                 <td class="text-end"><?= number_format((int)$s['trips_count'], 0, '.', ' ') ?></td>
                 <td class="text-end"><?= number_format((float)$s['sum_total'], 2, '.', ' ') ?></td>
                 <td class="text-end"><?= number_format((float)$s['sum_waiting'], 2, '.', ' ') ?></td>
+                <td class="text-end"><?= number_format((int)($s['paid_cancel_count'] ?? 0), 0, '.', ' ') ?></td>
+                <td class="text-end"><?= number_format((float)($s['paid_cancel_sum'] ?? 0), 2, '.', ' ') ?></td>
                 <td class="text-end"><?= number_format((int)$s['roundtrip_count'], 0, '.', ' ') ?></td>
                 <td class="text-end"><?= number_format((int)$s['duplicate_3h_count'], 0, '.', ' ') ?></td>
                 <td class="text-end"><?= number_format((float)$s['duplicate_3h_sum_total'], 2, '.', ' ') ?></td>
               </tr>
             <?php endforeach; ?>
             <?php if (!$stats): ?>
-              <tr><td colspan="7" class="text-muted">Bu sanada import qilinmagan.</td></tr>
+              <tr><td colspan="9" class="text-muted">Bu sanada import qilinmagan.</td></tr>
             <?php endif; ?>
             </tbody>
           </table>

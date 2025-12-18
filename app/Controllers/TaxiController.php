@@ -69,8 +69,11 @@ final class TaxiController extends BaseController
                         }
 
                         $status = trim((string)($r[$idx['status_order']] ?? ''));
-                        if (!$this->isSuccessfulStatus($status)) {
-                            continue;
+                        $paidCancel = (float)($r[$idx['paid_cancel']] ?? 0);
+                        $isSuccess = $this->isSuccessfulStatus($status);
+                        $isPaidCancel = !$isSuccess && $paidCancel > 0;
+                        if (!$isSuccess && !$isPaidCancel) {
+                            continue; // we store only successful trips + paid cancellations
                         }
 
                         $time = $this->excelTimeToHms($r[$idx['time_order']] ?? '');
@@ -84,10 +87,10 @@ final class TaxiController extends BaseController
                             $unknown++;
                         }
 
-                        $sumTotal = (float)($r[$idx['sum_total']] ?? 0);
-                        $sumWaiting = (float)($r[$idx['sum_waiting']] ?? 0);
+                        $sumTotal = $isSuccess ? (float)($r[$idx['sum_total']] ?? 0) : 0.0;
+                        $sumWaiting = $isSuccess ? (float)($r[$idx['sum_waiting']] ?? 0) : 0.0;
 
-                        $isRoundtrip = $this->normalizeAddress($sender) !== '' && $this->normalizeAddress($sender) === $this->normalizeAddress($receiver);
+                        $isRoundtrip = $isSuccess && $this->normalizeAddress($sender) !== '' && $this->normalizeAddress($sender) === $this->normalizeAddress($receiver);
 
                         $trips[] = [
                             'trip_date' => $date,
@@ -103,6 +106,8 @@ final class TaxiController extends BaseController
                             'restaurant_name' => $restaurant,
                             'sum_total' => $sumTotal,
                             'sum_waiting' => $sumWaiting,
+                            'paid_cancel_sum' => $isPaidCancel ? $paidCancel : 0.0,
+                            'is_paid_cancel' => $isPaidCancel ? 1 : 0,
                             'is_roundtrip' => $isRoundtrip ? 1 : 0,
                             'is_duplicate_3h' => 0, // set later
                         ];
@@ -111,6 +116,9 @@ final class TaxiController extends BaseController
                     // Duplicate detection: same receiver more than once within 3 hours (successful trips)
                     $byReceiver = [];
                     foreach ($trips as $i => $t) {
+                        if ((int)$t['is_paid_cancel'] === 1) {
+                            continue;
+                        }
                         $key = $this->normalizeAddress((string)$t['receiver_address']);
                         if ($key === '') continue;
                         $byReceiver[$key][] = $i;
@@ -134,8 +142,8 @@ final class TaxiController extends BaseController
 
                     // Insert trips
                     $insTrip = $this->db->prepare('INSERT INTO taxi_trips
-                        (trip_date, trip_time, application_id, tariff, delivery_variant, status, order_source, city, sender_address, receiver_address, restaurant_name, sum_total, sum_waiting, is_roundtrip, is_duplicate_3h, created_at)
-                        VALUES (:d,:t,:id,:tar,:dv,:st,:src,:city,:sa,:ra,:rn,:sum,:wait,:rt,:dup,NOW())');
+                        (trip_date, trip_time, application_id, tariff, delivery_variant, status, order_source, city, sender_address, receiver_address, restaurant_name, sum_total, sum_waiting, paid_cancel_sum, is_paid_cancel, is_roundtrip, is_duplicate_3h, created_at)
+                        VALUES (:d,:t,:id,:tar,:dv,:st,:src,:city,:sa,:ra,:rn,:sum,:wait,:pc,:ipc,:rt,:dup,NOW())');
 
                     foreach ($trips as $t) {
                         $insTrip->execute([
@@ -152,6 +160,8 @@ final class TaxiController extends BaseController
                             'rn' => $t['restaurant_name'],
                             'sum' => $t['sum_total'],
                             'wait' => $t['sum_waiting'],
+                            'pc' => $t['paid_cancel_sum'],
+                            'ipc' => $t['is_paid_cancel'],
                             'rt' => $t['is_roundtrip'],
                             'dup' => $t['is_duplicate_3h'],
                         ]);
@@ -166,25 +176,32 @@ final class TaxiController extends BaseController
                                 'trips_count' => 0,
                                 'sum_total' => 0.0,
                                 'sum_waiting' => 0.0,
+                                'paid_cancel_count' => 0,
+                                'paid_cancel_sum' => 0.0,
                                 'roundtrip_count' => 0,
                                 'duplicate_3h_count' => 0,
                                 'duplicate_3h_sum_total' => 0.0,
                             ];
                         }
-                        $agg[$rn]['trips_count']++;
-                        $agg[$rn]['sum_total'] += (float)$t['sum_total'];
-                        $agg[$rn]['sum_waiting'] += (float)$t['sum_waiting'];
-                        $agg[$rn]['roundtrip_count'] += (int)$t['is_roundtrip'];
-                        if ((int)$t['is_duplicate_3h'] === 1) {
-                            $agg[$rn]['duplicate_3h_count']++;
-                            $agg[$rn]['duplicate_3h_sum_total'] += (float)$t['sum_total'];
+                        if ((int)$t['is_paid_cancel'] === 1) {
+                            $agg[$rn]['paid_cancel_count']++;
+                            $agg[$rn]['paid_cancel_sum'] += (float)$t['paid_cancel_sum'];
+                        } else {
+                            $agg[$rn]['trips_count']++;
+                            $agg[$rn]['sum_total'] += (float)$t['sum_total'];
+                            $agg[$rn]['sum_waiting'] += (float)$t['sum_waiting'];
+                            $agg[$rn]['roundtrip_count'] += (int)$t['is_roundtrip'];
+                            if ((int)$t['is_duplicate_3h'] === 1) {
+                                $agg[$rn]['duplicate_3h_count']++;
+                                $agg[$rn]['duplicate_3h_sum_total'] += (float)$t['sum_total'];
+                            }
                         }
                     }
 
                     $ins = $this->db->prepare('INSERT INTO taxi_daily_stats
-                        (stat_date, restaurant_name, trips_count, sum_total, sum_waiting, roundtrip_count, duplicate_3h_count, duplicate_3h_sum_total, updated_at)
-                        VALUES (:d,:rn,:c,:sum,:wait,:rt,:dc,:ds,NOW())
-                        ON DUPLICATE KEY UPDATE trips_count=VALUES(trips_count), sum_total=VALUES(sum_total), sum_waiting=VALUES(sum_waiting),
+                        (stat_date, restaurant_name, trips_count, sum_total, sum_waiting, paid_cancel_count, paid_cancel_sum, roundtrip_count, duplicate_3h_count, duplicate_3h_sum_total, updated_at)
+                        VALUES (:d,:rn,:c,:sum,:wait,:pcc,:pcs,:rt,:dc,:ds,NOW())
+                        ON DUPLICATE KEY UPDATE trips_count=VALUES(trips_count), sum_total=VALUES(sum_total), sum_waiting=VALUES(sum_waiting), paid_cancel_count=VALUES(paid_cancel_count), paid_cancel_sum=VALUES(paid_cancel_sum),
                           roundtrip_count=VALUES(roundtrip_count), duplicate_3h_count=VALUES(duplicate_3h_count), duplicate_3h_sum_total=VALUES(duplicate_3h_sum_total),
                           updated_at=NOW()');
 
@@ -195,6 +212,8 @@ final class TaxiController extends BaseController
                             'c' => (int)$a['trips_count'],
                             'sum' => (float)$a['sum_total'],
                             'wait' => (float)$a['sum_waiting'],
+                            'pcc' => (int)$a['paid_cancel_count'],
+                            'pcs' => (float)$a['paid_cancel_sum'],
                             'rt' => (int)$a['roundtrip_count'],
                             'dc' => (int)$a['duplicate_3h_count'],
                             'ds' => (float)$a['duplicate_3h_sum_total'],
@@ -301,6 +320,7 @@ final class TaxiController extends BaseController
             'receiver_address' => 'Адреса получателей',
             'sum_total' => 'Фактическая стоимость заявки с НДС сум',
             'sum_waiting' => 'Стоимость платного ожидания итого  сум',
+            'paid_cancel' => 'Платная отмена до прибытия курьера',
         ];
         $idx = [];
         foreach ($need as $k => $label) {
