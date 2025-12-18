@@ -1,143 +1,101 @@
 <?php
 /** @var \App\Auth $auth */
 /** @var \App\I18n $t */
-/** @var bool $smartomatoConfigured */
-/** @var array $byDay */
 /** @var string $from */
 /** @var string $to */
-/** @var array $total */
-/** @var array $byDeliveryType */
-/** @var array $byRestaurant */
-/** @var array $byPayment */
-/** @var array $byChannel */
-/** @var array $telegram */
-/** @var array $uzum */
-/** @var array $commission */
+/** @var string $period */
+/** @var int $restaurantId */
+/** @var array $restaurants */
+
+/** @var array $dates */
+/** @var array $ordersByDate */
+/** @var array $salaryByDate */
+/** @var array $taxiByDate */
+/** @var array $millByDate */
+/** @var array $errByDate */
+/** @var array $aggByDate */
+/** @var array $uzumByDate */
+/** @var array $webappByDate */
+/** @var array $telegramByDate */
+/** @var array $boardByDate */
+/** @var array $typesByDate */
+/** @var array $opIds */
+/** @var array $opNames */
+/** @var array $opSeries */
 require __DIR__ . '/../partials/layout_top.php';
 
-$labels = array_map(static fn($r) => $r['stat_date'], $byDay);
-$orders = array_map(static fn($r) => (int)$r['cnt'], $byDay);
-$sums = array_map(static fn($r) => (float)$r['sum_final'], $byDay);
+$labels = $dates;
+$orders = [];
+$revenue = [];
+$avgCheck = [];
+$salary = [];
+$taxi = [];
+$errors = [];
+$yandex = [];
+$wolt = [];
+$uzum = [];
+$webapp = [];
+$telegram = [];
+$calls = [];
+$delivery = [];
+$pickup = [];
 
-$totalOrders = (int)($total['cnt'] ?? 0);
-$totalSum = (float)($total['sum_final'] ?? 0);
+foreach ($labels as $d) {
+    $o = $ordersByDate[$d] ?? ['orders' => 0, 'revenue' => 0, 'avg' => 0];
+    $orders[] = (float)$o['orders'];
+    $revenue[] = (float)$o['revenue'];
+    $avgCheck[] = (float)$o['avg'];
 
-$deliveryCnt = 0;
-$pickupCnt = 0;
-foreach ($byDeliveryType as $r) {
-    if (($r['delivery_type'] ?? '') === 'delivery') $deliveryCnt = (int)$r['cnt'];
-    if (($r['delivery_type'] ?? '') === 'pickup') $pickupCnt = (int)$r['cnt'];
+    $salary[] = (float)(($salaryByDate[$d]['salary'] ?? 0));
+    $t = (float)(($taxiByDate[$d]['taxi'] ?? 0)) + (float)(($millByDate[$d]['mill'] ?? 0));
+    $taxi[] = $t;
+    $errors[] = (float)(($errByDate[$d]['errors'] ?? 0));
+
+    $a = $aggByDate[$d] ?? ['yandex' => 0, 'wolt' => 0, 'uzum' => 0];
+    $yandex[] = (float)($a['yandex'] ?? 0);
+    $wolt[] = (float)($a['wolt'] ?? 0);
+    $uzum[] = (float)($uzumByDate[$d] ?? 0);
+
+    $webapp[] = (float)($webappByDate[$d] ?? 0);
+    $tg = (float)($telegramByDate[$d] ?? 0);
+    $telegram[] = $tg;
+    $b = (float)($boardByDate[$d] ?? 0);
+    $calls[] = max(0.0, $b - $tg);
+
+    $tt = $typesByDate[$d] ?? ['delivery' => 0, 'pickup' => 0];
+    $delivery[] = (float)($tt['delivery'] ?? 0);
+    $pickup[] = (float)($tt['pickup'] ?? 0);
 }
-
-function payment_label(string $ps): string {
-    return match ($ps) {
-        'cash' => 'Naqt pul',
-        'card' => 'Karta',
-        'external_service_card_online' => 'Agregator',
-        default => $ps,
-    };
-}
-function channel_label(string $ch): string {
-    return match ($ch) {
-        'web' => 'Web-sayt',
-        'app' => 'Ilova',
-        'yandex' => 'Yandex Eda',
-        'wolt' => 'Wolt',
-        'board' => "Qo'ng'iroqlar",
-        'other' => 'Boshqa',
-        default => $ch,
-    };
-}
-
-// Channel breakdown with Telegram subtraction from board ("calls")
-$channels = [];
-foreach ($byChannel as $r) {
-    $channels[(string)$r['channel']] = [
-        'cnt' => (int)$r['cnt'],
-        'sum_final' => (float)$r['sum_final'],
-    ];
-}
-$telegramCnt = (int)($telegram['cnt'] ?? 0);
-$telegramSum = (float)($telegram['sum_final'] ?? 0);
-$uzumCnt = (int)($uzum['cnt'] ?? 0);
-$uzumSum = (float)($uzum['sum_final'] ?? 0);
-
-$boardCnt = (int)($channels['board']['cnt'] ?? 0);
-$boardSum = (float)($channels['board']['sum_final'] ?? 0);
-$callsCnt = max(0, $boardCnt - $telegramCnt);
-$callsSum = max(0.0, $boardSum - $telegramSum);
-
-// Build display rows
-$channelRows = [];
-foreach ($channels as $ch => $v) {
-    if ($ch === 'board') continue; // replaced by calls + telegram
-    $channelRows[] = ['channel' => $ch, 'cnt' => (int)$v['cnt'], 'sum_final' => (float)$v['sum_final']];
-}
-$channelRows[] = ['channel' => 'calls', 'cnt' => $callsCnt, 'sum_final' => $callsSum];
-$channelRows[] = ['channel' => 'telegram', 'cnt' => $telegramCnt, 'sum_final' => $telegramSum];
-$channelRows[] = ['channel' => 'uzum', 'cnt' => $uzumCnt, 'sum_final' => $uzumSum];
-
-usort($channelRows, static fn($a, $b) => ($b['cnt'] <=> $a['cnt']));
 ?>
+
+<div class="d-flex justify-content-between align-items-end mb-3">
+  <div>
+    <h1 class="h4 mb-1">Analitika</h1>
+    <div class="text-muted small"><?= htmlspecialchars($from) ?> → <?= htmlspecialchars($to) ?></div>
+  </div>
+  <form class="d-flex gap-2" method="get" action="">
+    <input type="hidden" name="page" value="dashboard">
+    <select class="form-select form-select-sm" name="period">
+      <option value="week" <?= $period==='week'?'selected':'' ?>>Hafta</option>
+      <option value="month" <?= $period==='month'?'selected':'' ?>>Oy</option>
+      <option value="year" <?= $period==='year'?'selected':'' ?>>Yil</option>
+    </select>
+    <select class="form-select form-select-sm" name="restaurant_id">
+      <option value="0">Barcha restoran</option>
+      <?php foreach ($restaurants as $id => $name): ?>
+        <option value="<?= (int)$id ?>" <?= ((int)$restaurantId === (int)$id) ? 'selected' : '' ?>><?= htmlspecialchars($name) ?></option>
+      <?php endforeach; ?>
+    </select>
+    <button class="btn btn-primary btn-sm" type="submit">Ko‘rsatish</button>
+  </form>
+</div>
 
 <div class="row g-3">
   <div class="col-12">
-    <div class="d-flex justify-content-between align-items-start">
-      <div>
-        <h1 class="h4 mb-1">Dashboard</h1>
-        <div class="text-muted small">Range: <?= htmlspecialchars($from) ?> → <?= htmlspecialchars($to) ?></div>
-      </div>
-      <div class="d-flex gap-2">
-        <?php if (($auth->role() ?? '') === 'admin' && !$smartomatoConfigured): ?>
-          <a class="btn btn-warning btn-sm" href="?page=settings">Smartomato sozlash</a>
-        <?php endif; ?>
-        <form method="get" action="" class="d-flex gap-2">
-          <input type="hidden" name="page" value="dashboard">
-          <input class="form-control form-control-sm" type="date" name="from" value="<?= htmlspecialchars($from) ?>">
-          <input class="form-control form-control-sm" type="date" name="to" value="<?= htmlspecialchars($to) ?>">
-          <button class="btn btn-primary btn-sm" type="submit">Filter</button>
-        </form>
-      </div>
-    </div>
-  </div>
-
-  <?php if (!$byDay): ?>
-    <div class="col-12">
-      <div class="alert alert-info mb-0">
-        Hozircha Smartomato statistikasi yo‘q. Avval <a href="?page=smartomato">Smartomato</a> sahifasida “Yig‘ish” tugmasini bosing yoki cron ishlashini kuting.
-      </div>
-    </div>
-  <?php endif; ?>
-
-  <div class="col-6 col-lg-3">
     <div class="card">
-      <div class="card-body py-3">
-        <div class="text-muted small">Buyurtmalar (Smartomato)</div>
-        <div class="fs-5 fw-semibold"><?= number_format($totalOrders, 0, '.', ' ') ?></div>
-      </div>
-    </div>
-  </div>
-  <div class="col-6 col-lg-3">
-    <div class="card">
-      <div class="card-body py-3">
-        <div class="text-muted small">Summa (Smartomato)</div>
-        <div class="fs-5 fw-semibold"><?= number_format($totalSum, 2, '.', ' ') ?></div>
-      </div>
-    </div>
-  </div>
-  <div class="col-6 col-lg-3">
-    <div class="card">
-      <div class="card-body py-3">
-        <div class="text-muted small">Delivery</div>
-        <div class="fs-5 fw-semibold"><?= number_format($deliveryCnt, 0, '.', ' ') ?></div>
-      </div>
-    </div>
-  </div>
-  <div class="col-6 col-lg-3">
-    <div class="card">
-      <div class="card-body py-3">
-        <div class="text-muted small">Pickup</div>
-        <div class="fs-5 fw-semibold"><?= number_format($pickupCnt, 0, '.', ' ') ?></div>
+      <div class="card-body">
+        <h2 class="h6 mb-2">1) Dinamika: buyurtmalar</h2>
+        <canvas id="ordersChart" height="120"></canvas>
       </div>
     </div>
   </div>
@@ -145,85 +103,8 @@ usort($channelRows, static fn($a, $b) => ($b['cnt'] <=> $a['cnt']));
   <div class="col-12">
     <div class="card">
       <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center">
-          <h2 class="h6 mb-0">Buyurtmalar va summa (kunlar bo‘yicha)</h2>
-        </div>
-        <canvas id="ordersSumChart" height="110"></canvas>
-      </div>
-    </div>
-  </div>
-
-  <div class="col-12 col-lg-6">
-    <div class="card">
-      <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center">
-          <h2 class="h6 mb-0">Kanal bo‘yicha</h2>
-          <a class="btn btn-outline-secondary btn-sm" href="?page=others">Boshqalar</a>
-        </div>
-        <div class="table-responsive mt-2">
-          <table class="table table-sm mb-0">
-            <thead>
-            <tr>
-              <th>Kanal</th>
-              <th class="text-end">Buyurtma</th>
-              <th class="text-end">Summa</th>
-              <th class="text-end">Komissiya</th>
-              <th class="text-end">Net</th>
-            </tr>
-            </thead>
-            <tbody>
-            <?php foreach ($channelRows as $r): ?>
-              <?php
-                $ch = (string)$r['channel'];
-                $cnt = (int)$r['cnt'];
-                $sum = (float)$r['sum_final'];
-                $pct = 0.0;
-                if ($ch === 'yandex') $pct = (float)($commission['yandex'] ?? 0);
-                if ($ch === 'wolt') $pct = (float)($commission['wolt'] ?? 0);
-                if ($ch === 'uzum') $pct = (float)($commission['uzum'] ?? 0);
-                $net = $sum * (1.0 - ($pct / 100.0));
-              ?>
-              <tr>
-                <td>
-                  <?= htmlspecialchars(match($ch) {
-                      'calls' => "Qo'ng'iroqlar (board - telegram)",
-                      'telegram' => 'Telegram bot (qo‘lda)',
-                      'uzum' => 'Uzum (qo‘lda)',
-                      default => channel_label($ch),
-                  }) ?>
-                </td>
-                <td class="text-end"><?= number_format($cnt, 0, '.', ' ') ?></td>
-                <td class="text-end"><?= number_format($sum, 2, '.', ' ') ?></td>
-                <td class="text-end"><?= ($pct > 0) ? number_format($pct, 2, '.', ' ') . '%' : '-' ?></td>
-                <td class="text-end"><?= ($pct > 0) ? number_format($net, 2, '.', ' ') : '-' ?></td>
-              </tr>
-            <?php endforeach; ?>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="col-12 col-lg-6">
-    <div class="card">
-      <div class="card-body">
-        <h2 class="h6 mb-0">To‘lov turlari</h2>
-        <div class="table-responsive mt-2">
-          <table class="table table-sm mb-0">
-            <thead><tr><th>To‘lov</th><th class="text-end">Buyurtma</th><th class="text-end">Summa</th></tr></thead>
-            <tbody>
-            <?php foreach ($byPayment as $r): ?>
-              <?php $ps = (string)$r['payment_source']; ?>
-              <tr>
-                <td><?= htmlspecialchars(payment_label($ps)) ?> <span class="text-muted small"><code><?= htmlspecialchars($ps) ?></code></span></td>
-                <td class="text-end"><?= number_format((int)$r['cnt'], 0, '.', ' ') ?></td>
-                <td class="text-end"><?= number_format((float)$r['sum_final'], 2, '.', ' ') ?></td>
-              </tr>
-            <?php endforeach; ?>
-            </tbody>
-          </table>
-        </div>
+        <h2 class="h6 mb-2">2) Dinamika: xarajatlar</h2>
+        <canvas id="expensesChart" height="120"></canvas>
       </div>
     </div>
   </div>
@@ -231,21 +112,35 @@ usort($channelRows, static fn($a, $b) => ($b['cnt'] <=> $a['cnt']));
   <div class="col-12">
     <div class="card">
       <div class="card-body">
-        <h2 class="h6 mb-0">Restaurant bo‘yicha</h2>
-        <div class="table-responsive mt-2">
-          <table class="table table-sm mb-0">
-            <thead><tr><th>Restaurant ID</th><th class="text-end">Buyurtma</th><th class="text-end">Summa</th></tr></thead>
-            <tbody>
-            <?php foreach ($byRestaurant as $r): ?>
-              <tr>
-                <td><?= htmlspecialchars((string)$r['restaurant_id']) ?></td>
-                <td class="text-end"><?= number_format((int)$r['cnt'], 0, '.', ' ') ?></td>
-                <td class="text-end"><?= number_format((float)$r['sum_final'], 2, '.', ' ') ?></td>
-              </tr>
-            <?php endforeach; ?>
-            </tbody>
-          </table>
-        </div>
+        <h2 class="h6 mb-2">3) Dinamika: agregatorlar (Yandex / Wolt / Uzum)</h2>
+        <canvas id="aggregatorsChart" height="110"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12">
+    <div class="card">
+      <div class="card-body">
+        <h2 class="h6 mb-2">4) Dinamika: boshqa kanallar (Web+App / Telegram / Qo'ng'iroqlar)</h2>
+        <canvas id="channelsChart" height="110"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12">
+    <div class="card">
+      <div class="card-body">
+        <h2 class="h6 mb-2">5) Dinamika: buyurtma turi (Delivery / Pickup) — Web+App+Board</h2>
+        <canvas id="typesChart" height="110"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12">
+    <div class="card">
+      <div class="card-body">
+        <h2 class="h6 mb-2">6) Dinamika: operatorlar (top 5)</h2>
+        <canvas id="operatorsChart" height="140"></canvas>
       </div>
     </div>
   </div>
@@ -254,24 +149,92 @@ usort($channelRows, static fn($a, $b) => ($b['cnt'] <=> $a['cnt']));
 <script>
   const labels = <?= json_encode($labels, JSON_UNESCAPED_UNICODE) ?>;
   const orders = <?= json_encode($orders, JSON_UNESCAPED_UNICODE) ?>;
-  const sums = <?= json_encode($sums, JSON_UNESCAPED_UNICODE) ?>;
+  const revenue = <?= json_encode($revenue, JSON_UNESCAPED_UNICODE) ?>;
+  const avg = <?= json_encode($avgCheck, JSON_UNESCAPED_UNICODE) ?>;
 
-  new Chart(document.getElementById('ordersSumChart'), {
-    type: 'bar',
+  new Chart(document.getElementById('ordersChart'), {
+    type: 'line',
     data: {
       labels,
       datasets: [
         {label: 'Buyurtmalar', data: orders, yAxisID: 'y'},
-        {label: 'Summa', data: sums, type: 'line', yAxisID: 'y1'}
+        {label: 'Vyручka', data: revenue, yAxisID: 'y1'},
+        {label: 'O‘rtacha чек', data: avg, yAxisID: 'y2'},
       ]
     },
     options: {
       responsive: true,
+      interaction: {mode: 'index', intersect: false},
       scales: {
         y: {position: 'left', ticks: {precision: 0}},
-        y1: {position: 'right', grid: {drawOnChartArea: false}}
+        y1: {position: 'right', grid: {drawOnChartArea: false}},
+        y2: {position: 'right', grid: {drawOnChartArea: false}, display: false},
       }
     }
+  });
+
+  const salary = <?= json_encode($salary, JSON_UNESCAPED_UNICODE) ?>;
+  const taxi = <?= json_encode($taxi, JSON_UNESCAPED_UNICODE) ?>;
+  const errors = <?= json_encode($errors, JSON_UNESCAPED_UNICODE) ?>;
+  new Chart(document.getElementById('expensesChart'), {
+    type: 'line',
+    data: { labels, datasets: [
+      {label: 'Ish haqi', data: salary},
+      {label: 'Taxi', data: taxi},
+      {label: 'Xatolar', data: errors},
+    ]},
+    options: {responsive:true, interaction:{mode:'index', intersect:false}}
+  });
+
+  const yandex = <?= json_encode($yandex, JSON_UNESCAPED_UNICODE) ?>;
+  const wolt = <?= json_encode($wolt, JSON_UNESCAPED_UNICODE) ?>;
+  const uzum = <?= json_encode($uzum, JSON_UNESCAPED_UNICODE) ?>;
+  new Chart(document.getElementById('aggregatorsChart'), {
+    type: 'line',
+    data: { labels, datasets: [
+      {label: 'Yandex', data: yandex},
+      {label: 'Wolt', data: wolt},
+      {label: 'Uzum', data: uzum},
+    ]},
+    options: {responsive:true, interaction:{mode:'index', intersect:false}}
+  });
+
+  const webapp = <?= json_encode($webapp, JSON_UNESCAPED_UNICODE) ?>;
+  const telegram = <?= json_encode($telegram, JSON_UNESCAPED_UNICODE) ?>;
+  const calls = <?= json_encode($calls, JSON_UNESCAPED_UNICODE) ?>;
+  new Chart(document.getElementById('channelsChart'), {
+    type: 'line',
+    data: { labels, datasets: [
+      {label: 'Web+App', data: webapp},
+      {label: 'Telegram', data: telegram},
+      {label: "Qo'ng'iroqlar", data: calls},
+    ]},
+    options: {responsive:true, interaction:{mode:'index', intersect:false}}
+  });
+
+  const delivery = <?= json_encode($delivery, JSON_UNESCAPED_UNICODE) ?>;
+  const pickup = <?= json_encode($pickup, JSON_UNESCAPED_UNICODE) ?>;
+  new Chart(document.getElementById('typesChart'), {
+    type: 'line',
+    data: { labels, datasets: [
+      {label: 'Delivery', data: delivery},
+      {label: 'Pickup', data: pickup},
+    ]},
+    options: {responsive:true, interaction:{mode:'index', intersect:false}}
+  });
+
+  const opIds = <?= json_encode($opIds, JSON_UNESCAPED_UNICODE) ?>;
+  const opNames = <?= json_encode($opNames, JSON_UNESCAPED_UNICODE) ?>;
+  const opSeries = <?= json_encode($opSeries, JSON_UNESCAPED_UNICODE) ?>;
+  const opDatasets = opIds.map((id) => {
+    const map = opSeries[id] || {};
+    const data = labels.map((d) => (map[d] || 0));
+    return {label: (opNames[id] || ('Operator ' + id)), data};
+  });
+  new Chart(document.getElementById('operatorsChart'), {
+    type: 'line',
+    data: {labels, datasets: opDatasets},
+    options: {responsive:true, interaction:{mode:'index', intersect:false}}
   });
 </script>
 

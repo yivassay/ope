@@ -1,0 +1,195 @@
+<?php
+/** @var \App\Auth $auth */
+/** @var \App\I18n $t */
+/** @var string $date */
+/** @var int $restaurantId */
+/** @var array $restaurants */
+/** @var array $commission */
+/** @var array $total */
+/** @var array $deliveryNoAgg */
+/** @var array $pickupNoAgg */
+/** @var array $agg */
+/** @var array $uzum */
+/** @var float $salarySum */
+/** @var array $taxi */
+/** @var float $millSum */
+/** @var array $err */
+/** @var array $byChannel */
+/** @var array $telegram */
+/** @var int $callsCnt */
+/** @var float $callsSum */
+/** @var array $byPayment */
+require __DIR__ . '/../partials/layout_top.php';
+
+function money($v): string { return number_format((float)$v, 2, '.', ' '); }
+function num0($v): string { return number_format((float)$v, 0, '.', ' '); }
+function payment_label(string $ps): string {
+    return match ($ps) {
+        'cash' => 'Naqt pul',
+        'card' => 'Karta',
+        'external_service_card_online' => 'Agregator',
+        default => $ps,
+    };
+}
+?>
+
+<div class="d-flex justify-content-between align-items-end mb-3">
+  <div>
+    <h1 class="h4 mb-1">Bugungi</h1>
+    <div class="text-muted small">Kun: <?= htmlspecialchars($date) ?></div>
+  </div>
+  <form class="d-flex gap-2" method="get" action="">
+    <input type="hidden" name="page" value="bugungi">
+    <input class="form-control form-control-sm" type="date" name="date" value="<?= htmlspecialchars($date) ?>">
+    <select class="form-select form-select-sm" name="restaurant_id">
+      <option value="0">Barcha restoran</option>
+      <?php foreach ($restaurants as $id => $name): ?>
+        <option value="<?= (int)$id ?>" <?= ((int)$restaurantId === (int)$id) ? 'selected' : '' ?>><?= htmlspecialchars($name) ?></option>
+      <?php endforeach; ?>
+    </select>
+    <button class="btn btn-primary btn-sm" type="submit">Ko‘rsatish</button>
+  </form>
+</div>
+
+<div class="row g-3">
+  <div class="col-12">
+    <h2 class="h6 mb-2">1) Foyda (buyurtmalar)</h2>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card"><div class="card-body py-3">
+      <div class="text-muted small">Jami buyurtma</div>
+      <div class="fs-5 fw-semibold"><?= num0($total['cnt'] ?? 0) ?></div>
+    </div></div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card"><div class="card-body py-3">
+      <div class="text-muted small">Jami summa</div>
+      <div class="fs-5 fw-semibold"><?= money($total['sum_final'] ?? 0) ?></div>
+    </div></div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card"><div class="card-body py-3">
+      <div class="text-muted small">Delivery (no agg)</div>
+      <div class="fs-5 fw-semibold"><?= num0($deliveryNoAgg['cnt'] ?? 0) ?></div>
+      <div class="text-muted small"><?= money($deliveryNoAgg['sum_final'] ?? 0) ?></div>
+    </div></div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card"><div class="card-body py-3">
+      <div class="text-muted small">Pickup (no agg)</div>
+      <div class="fs-5 fw-semibold"><?= num0($pickupNoAgg['cnt'] ?? 0) ?></div>
+      <div class="text-muted small"><?= money($pickupNoAgg['sum_final'] ?? 0) ?></div>
+    </div></div>
+  </div>
+
+  <div class="col-12">
+    <div class="card">
+      <div class="card-body">
+        <h3 class="h6 mb-2">Agregatorlar</h3>
+        <?php
+          $y = $agg['yandex'] ?? ['cnt'=>0,'sum_final'=>0];
+          $w = $agg['wolt'] ?? ['cnt'=>0,'sum_final'=>0];
+          $u = $uzum ?? ['cnt'=>0,'sum_final'=>0];
+          $yNet = (float)$y['sum_final'] * (1 - ((float)$commission['yandex']/100));
+          $wNet = (float)$w['sum_final'] * (1 - ((float)$commission['wolt']/100));
+          $uNet = (float)$u['sum_final'] * (1 - ((float)$commission['uzum']/100));
+        ?>
+        <div class="table-responsive">
+          <table class="table table-sm mb-0">
+            <thead><tr><th>Kanal</th><th class="text-end">Cnt</th><th class="text-end">Summa</th><th class="text-end">Komissiya</th><th class="text-end">Net</th></tr></thead>
+            <tbody>
+              <tr><td>Yandex Eda</td><td class="text-end"><?= num0($y['cnt']) ?></td><td class="text-end"><?= money($y['sum_final']) ?></td><td class="text-end"><?= money($commission['yandex']) ?>%</td><td class="text-end"><?= money($yNet) ?></td></tr>
+              <tr><td>Wolt</td><td class="text-end"><?= num0($w['cnt']) ?></td><td class="text-end"><?= money($w['sum_final']) ?></td><td class="text-end"><?= money($commission['wolt']) ?>%</td><td class="text-end"><?= money($wNet) ?></td></tr>
+              <tr><td>Uzum (qo‘lda)</td><td class="text-end"><?= num0($u['cnt']) ?></td><td class="text-end"><?= money($u['sum_final']) ?></td><td class="text-end"><?= money($commission['uzum']) ?>%</td><td class="text-end"><?= money($uNet) ?></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12">
+    <h2 class="h6 mb-2">2) Xarajatlar</h2>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card"><div class="card-body py-3">
+      <div class="text-muted small">Ish haqi (jami)</div>
+      <div class="fs-5 fw-semibold"><?= money($salarySum) ?></div>
+    </div></div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card"><div class="card-body py-3">
+      <div class="text-muted small">Taxi Yandex (jami)</div>
+      <div class="fs-5 fw-semibold"><?= money($taxi['sum_total'] ?? 0) ?></div>
+      <div class="text-muted small">Kutish: <?= money($taxi['sum_waiting'] ?? 0) ?></div>
+    </div></div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card"><div class="card-body py-3">
+      <div class="text-muted small">Taxi Millennium</div>
+      <div class="fs-5 fw-semibold"><?= money($millSum) ?></div>
+    </div></div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card"><div class="card-body py-3">
+      <div class="text-muted small">Ko‘syaklar</div>
+      <div class="fs-5 fw-semibold"><?= num0($err['cnt'] ?? 0) ?></div>
+      <div class="text-muted small"><?= money($err['sum'] ?? 0) ?></div>
+    </div></div>
+  </div>
+
+  <div class="col-12">
+    <div class="card"><div class="card-body">
+      <h3 class="h6 mb-2">Taxi qo‘shimcha</h3>
+      <div class="row g-2">
+        <div class="col-6 col-lg-3"><div class="text-muted small">Tuda-obratno</div><div class="fw-semibold"><?= num0($taxi['roundtrip_count'] ?? 0) ?></div></div>
+        <div class="col-6 col-lg-3"><div class="text-muted small">Ikki marta</div><div class="fw-semibold"><?= num0($taxi['duplicate_3h_count'] ?? 0) ?></div><div class="text-muted small"><?= money($taxi['duplicate_3h_sum_total'] ?? 0) ?></div></div>
+        <div class="col-6 col-lg-3"><div class="text-muted small">Qaytgan (возврат)</div><div class="fw-semibold"><?= num0($taxi['returned_count'] ?? 0) ?></div><div class="text-muted small"><?= money($taxi['returned_sum'] ?? 0) ?></div></div>
+      </div>
+    </div></div>
+  </div>
+
+  <div class="col-12">
+    <h2 class="h6 mb-2">3) Buyurtmalar kanallar bo‘yicha</h2>
+    <?php
+      $tg = $telegram ?? ['cnt'=>0,'sum_final'=>0];
+      $board = $byChannel['board'] ?? ['cnt'=>0,'sum_final'=>0];
+    ?>
+    <div class="card"><div class="card-body">
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead><tr><th>Kanal</th><th class="text-end">Cnt</th><th class="text-end">Summa</th></tr></thead>
+          <tbody>
+            <?php foreach ($byChannel as $ch => $r): ?>
+              <?php if ($ch === 'board') continue; ?>
+              <tr><td><?= htmlspecialchars((string)$ch) ?></td><td class="text-end"><?= num0($r['cnt'] ?? 0) ?></td><td class="text-end"><?= money($r['sum_final'] ?? 0) ?></td></tr>
+            <?php endforeach; ?>
+            <tr><td>Qo'ng'iroqlar (board - telegram)</td><td class="text-end"><?= num0($callsCnt) ?></td><td class="text-end"><?= money($callsSum) ?></td></tr>
+            <tr><td>Telegram (qo‘lda)</td><td class="text-end"><?= num0($tg['cnt'] ?? 0) ?></td><td class="text-end"><?= money($tg['sum_final'] ?? 0) ?></td></tr>
+            <tr><td>Uzum (qo‘lda)</td><td class="text-end"><?= num0($uzum['cnt'] ?? 0) ?></td><td class="text-end"><?= money($uzum['sum_final'] ?? 0) ?></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div></div>
+  </div>
+
+  <div class="col-12">
+    <h2 class="h6 mb-2">4) To‘lov turlari</h2>
+    <div class="card"><div class="card-body">
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead><tr><th>To‘lov</th><th class="text-end">Cnt</th><th class="text-end">Summa</th></tr></thead>
+          <tbody>
+            <?php foreach ($byPayment as $r): ?>
+              <?php $ps = (string)$r['payment_source']; ?>
+              <tr><td><?= htmlspecialchars(payment_label($ps)) ?> <span class="text-muted small"><code><?= htmlspecialchars($ps) ?></code></span></td><td class="text-end"><?= num0($r['cnt'] ?? 0) ?></td><td class="text-end"><?= money($r['sum_final'] ?? 0) ?></td></tr>
+            <?php endforeach; ?>
+          </tbody>
+        </table>
+      </div>
+    </div></div>
+  </div>
+</div>
+
+<?php require __DIR__ . '/../partials/layout_bottom.php'; ?>
+

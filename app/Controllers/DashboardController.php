@@ -4,6 +4,8 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Settings;
+use App\Services\RestaurantMap;
+use App\Services\Series;
 use DateTimeImmutable;
 use DateTimeZone;
 use PDO;
@@ -16,116 +18,249 @@ final class DashboardController extends BaseController
 
         $tz = new DateTimeZone(getenv('APP_TIMEZONE') ?: 'Asia/Tashkent');
         $today = (new DateTimeImmutable('now', $tz))->format('Y-m-d');
-
-        // Use latest available Smartomato date (because cron imports yesterday)
-        $latest = $this->db->query('SELECT MAX(stat_date) AS d FROM smartomato_daily_stats')->fetch(PDO::FETCH_ASSOC);
-        $defaultTo = (is_array($latest) && !empty($latest['d'])) ? (string)$latest['d'] : $today;
-
-        $from = (string)($_GET['from'] ?? '');
-        $to = (string)($_GET['to'] ?? $defaultTo);
-        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $to)) {
-            $to = $defaultTo;
+        $period = (string)($_GET['period'] ?? 'week'); // week|month|year
+        if (!in_array($period, ['week', 'month', 'year'], true)) {
+            $period = 'week';
         }
-        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $from)) {
-            $from = (new DateTimeImmutable($to, $tz))->modify('-13 day')->format('Y-m-d'); // default 14 days
+        $to = $today;
+        $from = match ($period) {
+            'week' => (new DateTimeImmutable($to, $tz))->modify('-6 day')->format('Y-m-d'),
+            'month' => (new DateTimeImmutable($to, $tz))->modify('-29 day')->format('Y-m-d'),
+            'year' => (new DateTimeImmutable($to, $tz))->modify('-364 day')->format('Y-m-d'),
+        };
+
+        $restaurantId = (int)($_GET['restaurant_id'] ?? 0); // 0=all
+
+        $rm = new RestaurantMap($settings);
+        $idToName = $rm->getIdToName();
+        if (!$idToName) {
+            // fallback: show ids that exist in data
+            $rows = $this->db->query('SELECT DISTINCT restaurant_id FROM smartomato_daily_stats ORDER BY restaurant_id')->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($rows as $r) {
+                $id = (int)$r['restaurant_id'];
+                if ($id > 0) $idToName[(string)$id] = 'Restaurant ' . $id;
+            }
         }
 
-        // Total orders sum by day (range)
-        $stmt = $this->db->prepare('
-            SELECT stat_date, SUM(order_count) AS cnt, SUM(sum_final) AS sum_final
+        $dates = Series::dateRange($from, $to, $tz);
+
+        // Orders dynamics
+        $q = '
+            SELECT stat_date, SUM(order_count) AS orders, SUM(sum_final) AS revenue
             FROM smartomato_daily_stats
+            WHERE stat_date BETWEEN :s AND :e
+        ';
+        $params = ['s' => $from, 'e' => $to];
+        if ($restaurantId > 0) {
+            $q .= ' AND restaurant_id = :rid';
+            $params['rid'] = $restaurantId;
+        }
+        $q .= ' GROUP BY stat_date ORDER BY stat_date';
+        $stmt = $this->db->prepare($q);
+        $stmt->execute($params);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $ordersByDate = [];
+        foreach ($rows as $r) {
+            $d = (string)$r['stat_date'];
+            $ordersByDate[$d] = [
+                'orders' => (float)($r['orders'] ?? 0),
+                'revenue' => (float)($r['revenue'] ?? 0),
+                'avg' => ((float)($r['orders'] ?? 0) > 0) ? ((float)$r['revenue'] / (float)$r['orders']) : 0,
+            ];
+        }
+
+        // Expenses dynamics
+        // Salaries: fixed + percent(sales_sum)
+        $fixedTotal = (float)($this->db->query('SELECT COALESCE(SUM(fixed_salary),0) AS s FROM operators WHERE is_active=1')->fetch(PDO::FETCH_ASSOC)['s'] ?? 0);
+        $stmt = $this->db->prepare('
+            SELECT sale_date, COALESCE(SUM(ods.sales_sum * o.percent_rate / 100.0),0) AS pct_sum
+            FROM operator_daily_sales ods
+            JOIN operators o ON o.id = ods.operator_id
+            WHERE ods.sale_date BETWEEN :s AND :e
+            GROUP BY sale_date
+            ORDER BY sale_date
+        ');
+        $stmt->execute(['s' => $from, 'e' => $to]);
+        $pctRows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $salaryByDate = [];
+        foreach ($pctRows as $r) {
+            $d = (string)$r['sale_date'];
+            $salaryByDate[$d] = ['salary' => $fixedTotal + (float)($r['pct_sum'] ?? 0)];
+        }
+
+        // Taxi costs per day (Yandex + paid cancel + returned) + Millennium
+        $stmt = $this->db->prepare('
+            SELECT stat_date, COALESCE(SUM(sum_total + paid_cancel_sum + returned_sum),0) AS taxi_sum
+            FROM taxi_daily_stats
             WHERE stat_date BETWEEN :s AND :e
             GROUP BY stat_date
             ORDER BY stat_date
         ');
         $stmt->execute(['s' => $from, 'e' => $to]);
-        $byDay = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        // Summary (range)
-        $stmt = $this->db->prepare('
-            SELECT SUM(order_count) AS cnt, SUM(sum_final) AS sum_final
-            FROM smartomato_daily_stats
-            WHERE stat_date BETWEEN :s AND :e
-        ');
-        $stmt->execute(['s' => $from, 'e' => $to]);
-        $total = $stmt->fetch(PDO::FETCH_ASSOC) ?: ['cnt' => 0, 'sum_final' => 0];
-
-        $stmt = $this->db->prepare('
-            SELECT delivery_type, SUM(order_count) AS cnt, SUM(sum_final) AS sum_final
-            FROM smartomato_daily_stats
-            WHERE stat_date BETWEEN :s AND :e
-            GROUP BY delivery_type
-        ');
-        $stmt->execute(['s' => $from, 'e' => $to]);
-        $byDeliveryType = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        // By restaurant (range)
-        $stmt = $this->db->prepare('
-            SELECT restaurant_id, SUM(order_count) AS cnt, SUM(sum_final) AS sum_final
-            FROM smartomato_daily_stats
-            WHERE stat_date BETWEEN :s AND :e
-            GROUP BY restaurant_id
-            ORDER BY cnt DESC
-        ');
-        $stmt->execute(['s' => $from, 'e' => $to]);
-        $byRestaurant = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        // By payment (range)
-        $stmt = $this->db->prepare('
-            SELECT payment_source, SUM(order_count) AS cnt, SUM(sum_final) AS sum_final
-            FROM smartomato_daily_stats
-            WHERE stat_date BETWEEN :s AND :e
-            GROUP BY payment_source
-            ORDER BY cnt DESC
-        ');
-        $stmt->execute(['s' => $from, 'e' => $to]);
-        $byPayment = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        // By channel (range)
-        $stmt = $this->db->prepare('
-            SELECT channel, SUM(order_count) AS cnt, SUM(sum_final) AS sum_final
-            FROM smartomato_daily_stats
-            WHERE stat_date BETWEEN :s AND :e
-            GROUP BY channel
-            ORDER BY cnt DESC
-        ');
-        $stmt->execute(['s' => $from, 'e' => $to]);
-        $byChannel = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        // Manual "others" (range): telegram + uzum (do not add to totals)
-        $stmt = $this->db->prepare('SELECT SUM(order_count) AS cnt, SUM(sum_final) AS sum_final FROM telegram_daily_stats WHERE stat_date BETWEEN :s AND :e');
-        $stmt->execute(['s' => $from, 'e' => $to]);
-        $telegram = $stmt->fetch(PDO::FETCH_ASSOC) ?: ['cnt' => 0, 'sum_final' => 0];
-
-        $uzum = ['cnt' => 0, 'sum_final' => 0];
+        $taxiRows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $taxiByDate = [];
+        foreach ($taxiRows as $r) {
+            $taxiByDate[(string)$r['stat_date']] = ['taxi' => (float)($r['taxi_sum'] ?? 0)];
+        }
+        $millByDate = [];
         try {
-            $stmt = $this->db->prepare('SELECT SUM(order_count) AS cnt, SUM(sum_final) AS sum_final FROM uzum_daily_stats WHERE stat_date BETWEEN :s AND :e');
+            $stmt = $this->db->prepare('
+                SELECT stat_date, COALESCE(SUM(sum_total),0) AS mill_sum
+                FROM millennium_taxi_daily_stats
+                WHERE stat_date BETWEEN :s AND :e
+                GROUP BY stat_date
+                ORDER BY stat_date
+            ');
             $stmt->execute(['s' => $from, 'e' => $to]);
-            $uzum = $stmt->fetch(PDO::FETCH_ASSOC) ?: ['cnt' => 0, 'sum_final' => 0];
+            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+                $millByDate[(string)$r['stat_date']] = ['mill' => (float)($r['mill_sum'] ?? 0)];
+            }
         } catch (\Throwable) {
-            $uzum = ['cnt' => 0, 'sum_final' => 0];
+            $millByDate = [];
         }
 
-        // Commission settings
-        $commission = [
-            'yandex' => (float)($settings->get('commission.yandex', '0') ?? 0),
-            'wolt' => (float)($settings->get('commission.wolt', '0') ?? 0),
-            'uzum' => (float)($settings->get('commission.uzum', '0') ?? 0),
-        ];
+        // Errors per day (amount)
+        $stmt = $this->db->prepare('
+            SELECT error_date, COALESCE(SUM(amount),0) AS err_sum
+            FROM delivery_errors
+            WHERE error_date BETWEEN :s AND :e
+            GROUP BY error_date
+            ORDER BY error_date
+        ');
+        $stmt->execute(['s' => $from, 'e' => $to]);
+        $errByDate = [];
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $errByDate[(string)$r['error_date']] = ['errors' => (float)($r['err_sum'] ?? 0)];
+        }
+
+        // Aggregators dynamics: yandex, wolt from Smartomato + uzum manual
+        $aggByDate = [];
+        $stmt = $this->db->prepare('
+            SELECT stat_date, channel, COALESCE(SUM(order_count),0) AS cnt
+            FROM smartomato_daily_stats
+            WHERE stat_date BETWEEN :s AND :e AND channel IN ("yandex","wolt")
+            GROUP BY stat_date, channel
+            ORDER BY stat_date
+        ');
+        $stmt->execute(['s' => $from, 'e' => $to]);
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $d = (string)$r['stat_date'];
+            if (!isset($aggByDate[$d])) $aggByDate[$d] = ['yandex' => 0, 'wolt' => 0, 'uzum' => 0];
+            $aggByDate[$d][(string)$r['channel']] = (float)$r['cnt'];
+        }
+        $uzumByDate = [];
+        try {
+            $stmt = $this->db->prepare('SELECT stat_date, COALESCE(SUM(order_count),0) AS cnt FROM uzum_daily_stats WHERE stat_date BETWEEN :s AND :e GROUP BY stat_date ORDER BY stat_date');
+            $stmt->execute(['s' => $from, 'e' => $to]);
+            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+                $uzumByDate[(string)$r['stat_date']] = (float)$r['cnt'];
+            }
+        } catch (\Throwable) {
+            $uzumByDate = [];
+        }
+
+        // Other channels dynamics: web+app, telegram, calls (board - telegram)
+        $stmt = $this->db->prepare('
+            SELECT stat_date, COALESCE(SUM(order_count),0) AS cnt
+            FROM smartomato_daily_stats
+            WHERE stat_date BETWEEN :s AND :e AND channel IN ("web","app")
+            GROUP BY stat_date
+            ORDER BY stat_date
+        ');
+        $stmt->execute(['s' => $from, 'e' => $to]);
+        $webappByDate = [];
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $webappByDate[(string)$r['stat_date']] = (float)$r['cnt'];
+        }
+        $stmt = $this->db->prepare('
+            SELECT stat_date, COALESCE(SUM(order_count),0) AS cnt
+            FROM smartomato_daily_stats
+            WHERE stat_date BETWEEN :s AND :e AND channel = "board"
+            GROUP BY stat_date
+            ORDER BY stat_date
+        ');
+        $stmt->execute(['s' => $from, 'e' => $to]);
+        $boardByDate = [];
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $boardByDate[(string)$r['stat_date']] = (float)$r['cnt'];
+        }
+        $telegramByDate = [];
+        $stmt = $this->db->prepare('SELECT stat_date, COALESCE(SUM(order_count),0) AS cnt FROM telegram_daily_stats WHERE stat_date BETWEEN :s AND :e GROUP BY stat_date ORDER BY stat_date');
+        $stmt->execute(['s' => $from, 'e' => $to]);
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $telegramByDate[(string)$r['stat_date']] = (float)$r['cnt'];
+        }
+
+        // Delivery types dynamics for web+app+board combined
+        $stmt = $this->db->prepare('
+            SELECT stat_date, delivery_type, COALESCE(SUM(order_count),0) AS cnt
+            FROM smartomato_daily_stats
+            WHERE stat_date BETWEEN :s AND :e AND channel IN ("web","app","board")
+            GROUP BY stat_date, delivery_type
+            ORDER BY stat_date
+        ');
+        $stmt->execute(['s' => $from, 'e' => $to]);
+        $typesByDate = [];
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $d = (string)$r['stat_date'];
+            if (!isset($typesByDate[$d])) $typesByDate[$d] = ['delivery' => 0, 'pickup' => 0];
+            $typesByDate[$d][(string)$r['delivery_type']] = (float)$r['cnt'];
+        }
+
+        // Operator dynamics (top 5 by order_count)
+        $topOps = [];
+        $opSeries = []; // opId => [date => count]
+        $stmt = $this->db->prepare('
+            SELECT operator_id, COALESCE(SUM(order_count),0) AS cnt
+            FROM operator_daily_sales
+            WHERE sale_date BETWEEN :s AND :e
+            GROUP BY operator_id
+            ORDER BY cnt DESC
+            LIMIT 5
+        ');
+        $stmt->execute(['s' => $from, 'e' => $to]);
+        $topOps = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $opIds = array_map(static fn($r) => (int)$r['operator_id'], $topOps);
+        $opNames = [];
+        if ($opIds) {
+            $in = implode(',', array_fill(0, count($opIds), '?'));
+            $stmt = $this->db->prepare("SELECT id, name FROM operators WHERE id IN ($in)");
+            $stmt->execute($opIds);
+            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+                $opNames[(int)$r['id']] = (string)$r['name'];
+            }
+            $stmt = $this->db->prepare("SELECT sale_date, operator_id, COALESCE(order_count,0) AS cnt FROM operator_daily_sales WHERE sale_date BETWEEN ? AND ? AND operator_id IN ($in)");
+            $stmt->execute(array_merge([$from, $to], $opIds));
+            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+                $oid = (int)$r['operator_id'];
+                $d = (string)$r['sale_date'];
+                if (!isset($opSeries[$oid])) $opSeries[$oid] = [];
+                $opSeries[$oid][$d] = (float)$r['cnt'];
+            }
+        }
 
         $this->render('pages/dashboard', [
-            'smartomatoConfigured' => (bool)$settings->get('smartomato.login') && (bool)$settings->get('smartomato.password'),
-            'byDay' => $byDay,
+            'period' => $period,
             'from' => $from,
             'to' => $to,
-            'total' => $total,
-            'byDeliveryType' => $byDeliveryType,
-            'byRestaurant' => $byRestaurant,
-            'byPayment' => $byPayment,
-            'byChannel' => $byChannel,
-            'telegram' => $telegram,
-            'uzum' => $uzum,
-            'commission' => $commission,
+            'restaurantId' => $restaurantId,
+            'restaurants' => $idToName,
+
+            'dates' => $dates,
+            'ordersByDate' => $ordersByDate,
+            'salaryByDate' => $salaryByDate,
+            'taxiByDate' => $taxiByDate,
+            'millByDate' => $millByDate,
+            'errByDate' => $errByDate,
+            'aggByDate' => $aggByDate,
+            'uzumByDate' => $uzumByDate,
+            'webappByDate' => $webappByDate,
+            'telegramByDate' => $telegramByDate,
+            'boardByDate' => $boardByDate,
+            'typesByDate' => $typesByDate,
+            'opIds' => $opIds,
+            'opNames' => $opNames,
+            'opSeries' => $opSeries,
         ]);
     }
 }

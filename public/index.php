@@ -30,6 +30,9 @@ switch ($page) {
     case 'dashboard':
         (new \App\Controllers\DashboardController($db, $auth))->index();
         break;
+    case 'bugungi':
+        (new \App\Controllers\BugungiController($db, $auth))->index();
+        break;
     case 'smartomato':
         (new \App\Controllers\SmartomatoController($db, $auth))->index();
         break;

@@ -4,6 +4,7 @@ declare(strict_types=1);
 return [
     'app.title' => 'Call-markaz analitikasi',
     'nav.dashboard' => 'Dashboard',
+    'nav.bugungi' => 'Bugungi',
     'nav.smartomato' => 'Smartomato',
     'nav.telegram_bot' => 'Telegram bot',
     'nav.others' => 'Boshqalar',
