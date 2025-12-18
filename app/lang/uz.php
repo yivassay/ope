@@ -6,6 +6,7 @@ return [
     'nav.dashboard' => 'Dashboard',
     'nav.smartomato' => 'Smartomato',
     'nav.telegram_bot' => 'Telegram bot',
+    'nav.others' => 'Boshqalar',
     'nav.operator_sales' => 'Operator savdo',
     'nav.operators' => 'Operatorlar',
     'nav.settings' => 'Sozlamalar',

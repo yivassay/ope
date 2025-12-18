@@ -41,8 +41,24 @@ require __DIR__ . '/../partials/layout_top.php';
         </div>
         <div class="col-12">
           <label class="form-label">Channel map (ixtiyoriy)</label>
-          <textarea class="form-control" name="smartomato_channel_map" rows="4" placeholder="android=app&#10;ios=app&#10;site=web&#10;yandex=yandex&#10;wolt=wolt&#10;board=board"><?= htmlspecialchars((string)$smartomato['channel_map']) ?></textarea>
+          <textarea class="form-control" name="smartomato_channel_map" rows="6" placeholder="marketplace=web&#10;marketplace_mobile=web&#10;mobile_application_android=app&#10;mobile_application_ios=app&#10;foodfox=yandex&#10;wolt=wolt&#10;board=board"><?= htmlspecialchars((string)$smartomato['channel_map']) ?></textarea>
           <div class="form-text">Format: har qatorda <code>source=channel</code>. Channel: app/web/yandex/wolt/board/other.</div>
+        </div>
+      </div>
+
+      <h2 class="h6 mt-4">Komissiya (%)</h2>
+      <div class="row g-3">
+        <div class="col-12 col-lg-4">
+          <label class="form-label">Yandex Eda</label>
+          <input class="form-control" name="commission_yandex" value="<?= htmlspecialchars((string)$smartomato['commission_yandex']) ?>">
+        </div>
+        <div class="col-12 col-lg-4">
+          <label class="form-label">Wolt</label>
+          <input class="form-control" name="commission_wolt" value="<?= htmlspecialchars((string)$smartomato['commission_wolt']) ?>">
+        </div>
+        <div class="col-12 col-lg-4">
+          <label class="form-label">Uzum</label>
+          <input class="form-control" name="commission_uzum" value="<?= htmlspecialchars((string)$smartomato['commission_uzum']) ?>">
         </div>
       </div>
 

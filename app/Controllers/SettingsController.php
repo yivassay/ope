@@ -24,6 +24,11 @@ final class SettingsController extends BaseController
             // Channel mapping: simple CSV "source=channel"
             $settings->set('smartomato.channel_map', trim((string)($_POST['smartomato_channel_map'] ?? '')));
 
+            // Aggregator commissions (%)
+            $settings->set('commission.yandex', trim((string)($_POST['commission_yandex'] ?? '0')));
+            $settings->set('commission.wolt', trim((string)($_POST['commission_wolt'] ?? '0')));
+            $settings->set('commission.uzum', trim((string)($_POST['commission_uzum'] ?? '0')));
+
             $saved = true;
         }
 
@@ -36,6 +41,9 @@ final class SettingsController extends BaseController
                 'delivered_status' => $settings->get('smartomato.delivered_status', 'complete'),
                 'per_page' => $settings->get('smartomato.per_page', '100'),
                 'channel_map' => $settings->get('smartomato.channel_map', ''),
+                'commission_yandex' => $settings->get('commission.yandex', '0'),
+                'commission_wolt' => $settings->get('commission.wolt', '0'),
+                'commission_uzum' => $settings->get('commission.uzum', '0'),
             ],
         ]);
     }

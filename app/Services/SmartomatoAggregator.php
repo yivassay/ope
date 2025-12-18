@@ -179,15 +179,21 @@ final class SmartomatoAggregator
 
     private static function guessChannel(string $source): string
     {
+        // Exact mapping per your Smartomato sources:
+        // - marketplace, marketplace_mobile => web
+        // - mobile_application_android, mobile_application_ios => app
+        // - foodfox => yandex (Yandex Eda)
+        // - board => calls (we keep it in channel="board" and show as "Qo'ng'iroqlar")
+        // - wolt => wolt
         $s = strtolower(trim($source));
-        if ($s === '') return 'other';
-        if (str_contains($s, 'android') || $s === 'android') return 'app';
-        if (str_contains($s, 'ios') || $s === 'ios' || str_contains($s, 'iphone')) return 'app';
-        if (str_contains($s, 'web') || str_contains($s, 'site') || str_contains($s, 'widget')) return 'web';
-        if (str_contains($s, 'yandex')) return 'yandex';
-        if (str_contains($s, 'wolt')) return 'wolt';
-        if (str_contains($s, 'board')) return 'board';
-        return 'other';
+        return match ($s) {
+            'marketplace', 'marketplace_mobile' => 'web',
+            'mobile_application_android', 'mobile_application_ios' => 'app',
+            'foodfox' => 'yandex',
+            'wolt' => 'wolt',
+            'board' => 'board',
+            default => 'other',
+        };
     }
 }
 
