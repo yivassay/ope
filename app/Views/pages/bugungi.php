@@ -19,6 +19,9 @@
 /** @var int $callsCnt */
 /** @var float $callsSum */
 /** @var array $byPayment */
+/** @var array $salaryRows */
+/** @var string|null $sendMessage */
+/** @var string|null $sendError */
 require __DIR__ . '/../partials/layout_top.php';
 
 function money($v): string { return number_format((float)$v, 2, '.', ' '); }
@@ -31,6 +34,15 @@ function payment_label(string $ps): string {
         default => $ps,
     };
 }
+?>
+
+<?php
+$profitTotal = (float)($total['sum_final'] ?? 0) + (float)($uzum['sum_final'] ?? 0);
+$pct = static function (float $v) use ($profitTotal): string {
+    if ($profitTotal <= 0) return '0%';
+    return number_format(($v / $profitTotal) * 100.0, 1, '.', '') . '%';
+};
+$expensesTotal = (float)$salarySum + (float)($taxi['sum_total'] ?? 0) + (float)$millSum + (float)($err['sum'] ?? 0);
 ?>
 
 <div class="d-flex justify-content-between align-items-end mb-3">
@@ -51,6 +63,19 @@ function payment_label(string $ps): string {
   </form>
 </div>
 
+<?php if (($sendMessage ?? null)): ?>
+  <div class="alert alert-success"><?= htmlspecialchars((string)$sendMessage) ?></div>
+<?php endif; ?>
+<?php if (($sendError ?? null)): ?>
+  <div class="alert alert-danger"><?= htmlspecialchars((string)$sendError) ?></div>
+<?php endif; ?>
+
+<div class="mb-3">
+  <form method="post" action="?page=bugungi&action=send_report&date=<?= urlencode($date) ?>&restaurant_id=<?= (int)$restaurantId ?>">
+    <button class="btn btn-success" type="submit">Xisobotni yuborish</button>
+  </form>
+</div>
+
 <div class="row g-3">
   <div class="col-12">
     <h2 class="h6 mb-2">1) Foyda (buyurtmalar)</h2>
@@ -64,21 +89,22 @@ function payment_label(string $ps): string {
   <div class="col-6 col-lg-3">
     <div class="card"><div class="card-body py-3">
       <div class="text-muted small">Jami summa</div>
-      <div class="fs-5 fw-semibold"><?= money($total['sum_final'] ?? 0) ?></div>
+      <div class="fs-5 fw-semibold"><?= money($profitTotal) ?></div>
+      <div class="text-muted small"><?= $pct($profitTotal) ?></div>
     </div></div>
   </div>
   <div class="col-6 col-lg-3">
     <div class="card"><div class="card-body py-3">
       <div class="text-muted small">Delivery (no agg)</div>
       <div class="fs-5 fw-semibold"><?= num0($deliveryNoAgg['cnt'] ?? 0) ?></div>
-      <div class="text-muted small"><?= money($deliveryNoAgg['sum_final'] ?? 0) ?></div>
+      <div class="text-muted small"><?= money($deliveryNoAgg['sum_final'] ?? 0) ?> (<?= $pct((float)($deliveryNoAgg['sum_final'] ?? 0)) ?>)</div>
     </div></div>
   </div>
   <div class="col-6 col-lg-3">
     <div class="card"><div class="card-body py-3">
       <div class="text-muted small">Pickup (no agg)</div>
       <div class="fs-5 fw-semibold"><?= num0($pickupNoAgg['cnt'] ?? 0) ?></div>
-      <div class="text-muted small"><?= money($pickupNoAgg['sum_final'] ?? 0) ?></div>
+      <div class="text-muted small"><?= money($pickupNoAgg['sum_final'] ?? 0) ?> (<?= $pct((float)($pickupNoAgg['sum_final'] ?? 0)) ?>)</div>
     </div></div>
   </div>
 
@@ -98,9 +124,9 @@ function payment_label(string $ps): string {
           <table class="table table-sm mb-0">
             <thead><tr><th>Kanal</th><th class="text-end">Cnt</th><th class="text-end">Summa</th><th class="text-end">Komissiya</th><th class="text-end">Net</th></tr></thead>
             <tbody>
-              <tr><td>Yandex Eda</td><td class="text-end"><?= num0($y['cnt']) ?></td><td class="text-end"><?= money($y['sum_final']) ?></td><td class="text-end"><?= money($commission['yandex']) ?>%</td><td class="text-end"><?= money($yNet) ?></td></tr>
-              <tr><td>Wolt</td><td class="text-end"><?= num0($w['cnt']) ?></td><td class="text-end"><?= money($w['sum_final']) ?></td><td class="text-end"><?= money($commission['wolt']) ?>%</td><td class="text-end"><?= money($wNet) ?></td></tr>
-              <tr><td>Uzum (qo‘lda)</td><td class="text-end"><?= num0($u['cnt']) ?></td><td class="text-end"><?= money($u['sum_final']) ?></td><td class="text-end"><?= money($commission['uzum']) ?>%</td><td class="text-end"><?= money($uNet) ?></td></tr>
+              <tr><td>Yandex Eda</td><td class="text-end"><?= num0($y['cnt']) ?></td><td class="text-end"><?= money($y['sum_final']) ?></td><td class="text-end"><?= money($commission['yandex']) ?>%</td><td class="text-end"><?= money($yNet) ?> <span class="text-muted small">(<?= $pct((float)$yNet) ?>)</span></td></tr>
+              <tr><td>Wolt</td><td class="text-end"><?= num0($w['cnt']) ?></td><td class="text-end"><?= money($w['sum_final']) ?></td><td class="text-end"><?= money($commission['wolt']) ?>%</td><td class="text-end"><?= money($wNet) ?> <span class="text-muted small">(<?= $pct((float)$wNet) ?>)</span></td></tr>
+              <tr><td>Uzum (qo‘lda)</td><td class="text-end"><?= num0($u['cnt']) ?></td><td class="text-end"><?= money($u['sum_final']) ?></td><td class="text-end"><?= money($commission['uzum']) ?>%</td><td class="text-end"><?= money($uNet) ?> <span class="text-muted small">(<?= $pct((float)$uNet) ?>)</span></td></tr>
             </tbody>
           </table>
         </div>
@@ -111,30 +137,39 @@ function payment_label(string $ps): string {
   <div class="col-12">
     <h2 class="h6 mb-2">2) Xarajatlar</h2>
   </div>
+  <div class="col-12 col-lg-4">
+    <div class="card"><div class="card-body py-3">
+      <div class="text-muted small">Jami xarajat</div>
+      <div class="fs-5 fw-semibold"><?= money($expensesTotal) ?></div>
+      <div class="text-muted small"><?= $pct($expensesTotal) ?></div>
+    </div></div>
+  </div>
   <div class="col-6 col-lg-3">
     <div class="card"><div class="card-body py-3">
       <div class="text-muted small">Ish haqi (jami)</div>
       <div class="fs-5 fw-semibold"><?= money($salarySum) ?></div>
+      <div class="text-muted small"><?= $pct((float)$salarySum) ?></div>
     </div></div>
   </div>
   <div class="col-6 col-lg-3">
     <div class="card"><div class="card-body py-3">
       <div class="text-muted small">Taxi Yandex (jami)</div>
       <div class="fs-5 fw-semibold"><?= money($taxi['sum_total'] ?? 0) ?></div>
-      <div class="text-muted small">Kutish: <?= money($taxi['sum_waiting'] ?? 0) ?></div>
+      <div class="text-muted small"><?= $pct((float)($taxi['sum_total'] ?? 0)) ?> · Kutish: <?= money($taxi['sum_waiting'] ?? 0) ?></div>
     </div></div>
   </div>
   <div class="col-6 col-lg-3">
     <div class="card"><div class="card-body py-3">
       <div class="text-muted small">Taxi Millennium</div>
       <div class="fs-5 fw-semibold"><?= money($millSum) ?></div>
+      <div class="text-muted small"><?= $pct((float)$millSum) ?></div>
     </div></div>
   </div>
   <div class="col-6 col-lg-3">
     <div class="card"><div class="card-body py-3">
       <div class="text-muted small">Ko‘syaklar</div>
       <div class="fs-5 fw-semibold"><?= num0($err['cnt'] ?? 0) ?></div>
-      <div class="text-muted small"><?= money($err['sum'] ?? 0) ?></div>
+      <div class="text-muted small"><?= money($err['sum'] ?? 0) ?> (<?= $pct((float)($err['sum'] ?? 0)) ?>)</div>
     </div></div>
   </div>
 
@@ -184,6 +219,35 @@ function payment_label(string $ps): string {
               <?php $ps = (string)$r['payment_source']; ?>
               <tr><td><?= htmlspecialchars(payment_label($ps)) ?> <span class="text-muted small"><code><?= htmlspecialchars($ps) ?></code></span></td><td class="text-end"><?= num0($r['cnt'] ?? 0) ?></td><td class="text-end"><?= money($r['sum_final'] ?? 0) ?></td></tr>
             <?php endforeach; ?>
+          </tbody>
+        </table>
+      </div>
+    </div></div>
+  </div>
+
+  <div class="col-12">
+    <h2 class="h6 mb-2">🙂Ishchilar</h2>
+    <div class="card"><div class="card-body">
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead><tr><th>Ism</th><th>Rejim</th><th class="text-end">Ish haqi</th><th class="text-end">Buyurtma</th></tr></thead>
+          <tbody>
+          <?php foreach (($salaryRows ?? []) as $r): ?>
+            <?php
+              $mode = (string)($r['role_mode'] ?? '');
+              $oc = (int)($r['order_count'] ?? 0);
+              $sal = (float)($r['salary_value'] ?? 0);
+            ?>
+            <tr>
+              <td><?= htmlspecialchars((string)$r['name']) ?></td>
+              <td><?= ($mode === 'logistic') ? 'Logist' : 'Operator' ?></td>
+              <td class="text-end"><?= money($sal) ?></td>
+              <td class="text-end"><?= ($mode === 'logistic') ? 'logist' : num0($oc) ?></td>
+            </tr>
+          <?php endforeach; ?>
+          <?php if (!($salaryRows ?? [])): ?>
+            <tr><td colspan="4" class="text-muted">Hozircha ish haqi kiritilmagan.</td></tr>
+          <?php endif; ?>
           </tbody>
         </table>
       </div>

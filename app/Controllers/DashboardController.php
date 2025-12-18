@@ -70,23 +70,29 @@ final class DashboardController extends BaseController
         }
 
         // Expenses dynamics
-        // Salaries: fixed + percent(sales_sum)
+        // Salaries by day:
+        // - operator: fixed + %sales
+        // - logistic: manual_salary (100%)
         $salaryByDate = [];
         try {
-            $fixedTotal = (float)($this->db->query('SELECT COALESCE(SUM(fixed_salary),0) AS s FROM operators WHERE is_active=1')->fetch(PDO::FETCH_ASSOC)['s'] ?? 0);
             $stmt = $this->db->prepare('
-                SELECT sale_date, COALESCE(SUM(ods.sales_sum * o.percent_rate / 100.0),0) AS pct_sum
+                SELECT ods.sale_date,
+                       COALESCE(SUM(
+                          CASE
+                            WHEN ods.role_mode = "logistic" THEN ods.manual_salary
+                            ELSE (o.fixed_salary + (ods.sales_sum * o.percent_rate / 100.0))
+                          END
+                       ),0) AS salary_sum
                 FROM operator_daily_sales ods
                 JOIN operators o ON o.id = ods.operator_id
                 WHERE ods.sale_date BETWEEN :s AND :e
-                GROUP BY sale_date
-                ORDER BY sale_date
+                GROUP BY ods.sale_date
+                ORDER BY ods.sale_date
             ');
             $stmt->execute(['s' => $from, 'e' => $to]);
-            $pctRows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            foreach ($pctRows as $r) {
+            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
                 $d = (string)$r['sale_date'];
-                $salaryByDate[$d] = ['salary' => $fixedTotal + (float)($r['pct_sum'] ?? 0)];
+                $salaryByDate[$d] = ['salary' => (float)($r['salary_sum'] ?? 0)];
             }
         } catch (\Throwable) {
             $salaryByDate = [];

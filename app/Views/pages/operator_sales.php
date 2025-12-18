@@ -27,8 +27,10 @@ require __DIR__ . '/../partials/layout_top.php';
         <th>Operator</th>
         <th class="text-end">Fix</th>
         <th class="text-end">%</th>
+        <th>Rejim</th>
         <th class="text-end">Savdo (so'm)</th>
         <th class="text-end">Buyurtma soni</th>
+        <th class="text-end">Logist ish haqi</th>
         <th class="text-end">Ish haqi (hisob)</th>
         <th>Izoh</th>
         <th></th>
@@ -42,9 +44,11 @@ require __DIR__ . '/../partials/layout_top.php';
           $salesSum = $sale ? (float)$sale['sales_sum'] : 0.0;
           $orderCount = $sale ? (int)$sale['order_count'] : 0;
           $note = $sale ? (string)$sale['note'] : '';
+          $roleMode = $sale ? (string)($sale['role_mode'] ?? 'operator') : 'operator';
+          $manualSalary = $sale ? (float)($sale['manual_salary'] ?? 0) : 0.0;
           $fixed = (float)$op['fixed_salary'];
           $pct = (float)$op['percent_rate'];
-          $salary = $fixed + ($salesSum * $pct / 100.0);
+          $salary = ($roleMode === 'logistic') ? $manualSalary : ($fixed + ($salesSum * $pct / 100.0));
         ?>
         <tr>
           <td>
@@ -55,8 +59,10 @@ require __DIR__ . '/../partials/layout_top.php';
           </td>
           <td class="text-end"><?= number_format($fixed, 2, '.', ' ') ?></td>
           <td class="text-end"><?= number_format($pct, 3, '.', ' ') ?></td>
+          <td><?= ($roleMode === 'logistic') ? 'Logist' : 'Operator' ?></td>
           <td class="text-end"><?= number_format($salesSum, 2, '.', ' ') ?></td>
           <td class="text-end"><?= (int)$orderCount ?></td>
+          <td class="text-end"><?= number_format($manualSalary, 2, '.', ' ') ?></td>
           <td class="text-end fw-semibold"><?= number_format($salary, 2, '.', ' ') ?></td>
           <td class="text-muted small"><?= htmlspecialchars($note) ?></td>
           <td class="text-end">
@@ -64,9 +70,16 @@ require __DIR__ . '/../partials/layout_top.php';
           </td>
         </tr>
         <tr class="collapse" id="editSale<?= $opId ?>">
-          <td colspan="8">
+          <td colspan="10">
             <form method="post" action="?page=operator_sales&action=save&date=<?= urlencode($date) ?>" class="row g-2">
               <input type="hidden" name="operator_id" value="<?= $opId ?>">
+              <div class="col-12 col-lg-3">
+                <label class="form-label small mb-1">Rejim</label>
+                <select class="form-select" name="role_mode">
+                  <option value="operator" <?= ($roleMode === 'operator') ? 'selected' : '' ?>>Operator</option>
+                  <option value="logistic" <?= ($roleMode === 'logistic') ? 'selected' : '' ?>>Logist</option>
+                </select>
+              </div>
               <div class="col-12 col-lg-4">
                 <label class="form-label small mb-1">Savdo (so'm)</label>
                 <input class="form-control" name="sales_sum" value="<?= htmlspecialchars((string)$salesSum) ?>" required>
@@ -74,6 +87,10 @@ require __DIR__ . '/../partials/layout_top.php';
               <div class="col-12 col-lg-3">
                 <label class="form-label small mb-1">Buyurtma soni (ixtiyoriy)</label>
                 <input class="form-control" name="order_count" value="<?= htmlspecialchars((string)$orderCount) ?>">
+              </div>
+              <div class="col-12 col-lg-2">
+                <label class="form-label small mb-1">Logist ish haqi</label>
+                <input class="form-control" name="manual_salary" value="<?= htmlspecialchars((string)$manualSalary) ?>">
               </div>
               <div class="col-12 col-lg-4">
                 <label class="form-label small mb-1">Izoh</label>

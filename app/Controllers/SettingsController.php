@@ -77,6 +77,10 @@ final class SettingsController extends BaseController
             // Restaurants mapping for UI selections: id|name
             $settings->set('restaurants.map', trim((string)($_POST['restaurants_map'] ?? '')));
 
+            // Telegram report settings
+            $settings->set('telegram.bot_token', trim((string)($_POST['telegram_bot_token'] ?? '')));
+            $settings->set('telegram.chat_id', trim((string)($_POST['telegram_chat_id'] ?? '')));
+
             $saved = true;
         }
 
@@ -96,6 +100,8 @@ final class SettingsController extends BaseController
                 'commission_uzum' => $settings->get('commission.uzum', '0'),
                 'taxi_restaurant_keywords' => $settings->get('taxi.restaurant_keywords', ''),
                 'restaurants_map' => $settings->get('restaurants.map', ''),
+                'telegram_bot_token' => $settings->get('telegram.bot_token', ''),
+                'telegram_chat_id' => $settings->get('telegram.chat_id', ''),
             ],
         ]);
     }

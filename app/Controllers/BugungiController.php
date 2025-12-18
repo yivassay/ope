@@ -5,6 +5,7 @@ namespace App\Controllers;
 
 use App\Settings;
 use App\Services\RestaurantMap;
+use App\Services\Telegram;
 use DateTimeImmutable;
 use DateTimeZone;
 use PDO;
@@ -100,11 +101,29 @@ final class BugungiController extends BaseController
         }
 
         // Expenses: salary for day
-        $fixedTotal = (float)($this->db->query('SELECT COALESCE(SUM(fixed_salary),0) AS s FROM operators WHERE is_active=1')->fetch(PDO::FETCH_ASSOC)['s'] ?? 0);
-        $stmt = $this->db->prepare('SELECT COALESCE(SUM(ods.sales_sum * o.percent_rate / 100.0),0) AS pct_sum FROM operator_daily_sales ods JOIN operators o ON o.id=ods.operator_id WHERE ods.sale_date=:d');
-        $stmt->execute(['d' => $date]);
-        $pct = (float)($stmt->fetch(PDO::FETCH_ASSOC)['pct_sum'] ?? 0);
-        $salarySum = $fixedTotal + $pct;
+        $salarySum = 0.0;
+        $salaryRows = [];
+        try {
+            $stmt = $this->db->prepare('
+                SELECT o.name, ods.role_mode, ods.order_count, ods.sales_sum, ods.manual_salary,
+                       CASE
+                         WHEN ods.role_mode="logistic" THEN ods.manual_salary
+                         ELSE (o.fixed_salary + (ods.sales_sum * o.percent_rate / 100.0))
+                       END AS salary_value
+                FROM operator_daily_sales ods
+                JOIN operators o ON o.id = ods.operator_id
+                WHERE ods.sale_date = :d
+                ORDER BY o.name
+            ');
+            $stmt->execute(['d' => $date]);
+            $salaryRows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($salaryRows as $r) {
+                $salarySum += (float)($r['salary_value'] ?? 0);
+            }
+        } catch (Throwable) {
+            $salarySum = 0.0;
+            $salaryRows = [];
+        }
 
         // Taxi yandex sums (optionally filter by restaurantName via mapping)
         $taxi = [
@@ -225,6 +244,108 @@ final class BugungiController extends BaseController
         $stmt->execute($params);
         $byPayment = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+        // Xisobotni yuborish (Telegram)
+        $sendMessage = null;
+        $sendError = null;
+        if (($_GET['action'] ?? '') === 'send_report' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+            try {
+                // checks:
+                // 1) Smartomato imported for date
+                $stmt = $this->db->prepare('SELECT COUNT(*) AS c FROM smartomato_daily_stats WHERE stat_date=:d');
+                $stmt->execute(['d' => $date]);
+                $hasOrders = ((int)($stmt->fetch(PDO::FETCH_ASSOC)['c'] ?? 0)) > 0;
+                if (!$hasOrders) {
+                    throw new \RuntimeException('Smartomato buyurtmalar yuklanmagan');
+                }
+
+                // 2) Taxi imported for date
+                $stmt = $this->db->prepare('SELECT COUNT(*) AS c FROM taxi_daily_stats WHERE stat_date=:d');
+                $stmt->execute(['d' => $date]);
+                $hasTaxi = ((int)($stmt->fetch(PDO::FETCH_ASSOC)['c'] ?? 0)) > 0;
+                if (!$hasTaxi) {
+                    throw new \RuntimeException('Yandex taxi yuklanmagan');
+                }
+
+                // 3) Salaries at least 3 staff
+                $stmt = $this->db->prepare('SELECT COUNT(DISTINCT operator_id) AS c FROM operator_daily_sales WHERE sale_date=:d');
+                $stmt->execute(['d' => $date]);
+                $staffCnt = (int)($stmt->fetch(PDO::FETCH_ASSOC)['c'] ?? 0);
+                if ($staffCnt < 3) {
+                    throw new \RuntimeException('Ishchilar ish haqi kam (kamida 3 ta kiriting)');
+                }
+
+                $botToken = (string)$settings->get('telegram.bot_token', '');
+                $chatId = (string)$settings->get('telegram.chat_id', '');
+
+                $profitTotal = (float)($total['sum_final'] ?? 0) + (float)($uzum['sum_final'] ?? 0);
+                $profitTotal = max(0.0, $profitTotal);
+
+                $ySum = (float)($y['sum_final'] ?? 0);
+                $wSum = (float)($w['sum_final'] ?? 0);
+                $uSum = (float)($u['sum_final'] ?? 0);
+                $yNet = $ySum * (1 - ((float)$commission['yandex']/100));
+                $wNet = $wSum * (1 - ((float)$commission['wolt']/100));
+                $uNet = $uSum * (1 - ((float)$commission['uzum']/100));
+
+                $expensesTotal = (float)$salarySum + (float)($taxi['sum_total'] ?? 0) + (float)$millSum + (float)($err['sum'] ?? 0);
+
+                $pct = static function (float $v) use ($profitTotal): string {
+                    if ($profitTotal <= 0) return '0%';
+                    return number_format(($v / $profitTotal) * 100.0, 1, '.', '') . '%';
+                };
+                $money = static function (float $v): string {
+                    return number_format($v, 2, '.', ' ');
+                };
+
+                $title = ($restaurantId > 0) ? (' (' . ($restaurants[(string)$restaurantId] ?? ('Restaurant ' . $restaurantId)) . ')') : '';
+
+                $lines = [];
+                $lines[] = "<b>💰Foyda{$title}</b>";
+                $lines[] = "Jami summa: <b>{$money($profitTotal)}</b>";
+                $lines[] = "Yandex: {$money($yNet)}";
+                $lines[] = "Uzum: {$money($uNet)}";
+                $lines[] = "Wolt: {$money($wNet)}";
+                $lines[] = "";
+                $lines[] = "<b>💸Xarajatlar</b>";
+                $lines[] = "Jami summa: <b>{$money($expensesTotal)}</b> ({$pct($expensesTotal)})";
+                $lines[] = "Ish haqi (jami): {$money((float)$salarySum)} ({$pct((float)$salarySum)})";
+                $lines[] = "Yandex taxi: {$money((float)($taxi['sum_total'] ?? 0))} ({$pct((float)($taxi['sum_total'] ?? 0))})";
+                $lines[] = "Millenium: {$money((float)$millSum)} ({$pct((float)$millSum)})";
+                if ((int)($err['cnt'] ?? 0) > 0) {
+                    $lines[] = "Kosyaklar: " . (int)$err['cnt'] . " ta, {$money((float)$err['sum'])}";
+                }
+                if ((int)($taxi['roundtrip_count'] ?? 0) > 0) {
+                    $lines[] = "Tuda-obratno: " . (int)$taxi['roundtrip_count'] . " ta";
+                }
+                if ((int)($taxi['duplicate_3h_count'] ?? 0) > 0) {
+                    $lines[] = "Ikki marta: " . (int)$taxi['duplicate_3h_count'] . " ta, {$money((float)$taxi['duplicate_3h_sum_total'])}";
+                }
+                if ((int)($taxi['returned_count'] ?? 0) > 0) {
+                    $lines[] = "Qaytgan (возврат): " . (int)$taxi['returned_count'] . " ta, {$money((float)$taxi['returned_sum'])}";
+                }
+
+                $lines[] = "";
+                $lines[] = "<b>🙂Ishchilar:</b>";
+                foreach ($salaryRows as $r) {
+                    $name = (string)$r['name'];
+                    $mode = (string)$r['role_mode'];
+                    $sal = (float)($r['salary_value'] ?? 0);
+                    if ($mode === 'logistic') {
+                        $lines[] = "{$name}: {$money($sal)} (logist)";
+                    } else {
+                        $oc = (int)($r['order_count'] ?? 0);
+                        $lines[] = "{$name}: {$money($sal)} ({$oc} ta)";
+                    }
+                }
+
+                $text = implode("\n", $lines);
+                (new Telegram($botToken))->sendMessage($chatId, $text);
+                $sendMessage = 'Telegramga yuborildi';
+            } catch (Throwable $e) {
+                $sendError = $e->getMessage();
+            }
+        }
+
         $this->render('pages/bugungi', [
             'date' => $date,
             'restaurantId' => $restaurantId,
@@ -236,6 +357,7 @@ final class BugungiController extends BaseController
             'agg' => $agg,
             'uzum' => $uzum,
             'salarySum' => $salarySum,
+            'salaryRows' => $salaryRows,
             'taxi' => $taxi,
             'millSum' => $millSum,
             'err' => $err,
@@ -244,6 +366,8 @@ final class BugungiController extends BaseController
             'callsCnt' => $callsCnt,
             'callsSum' => $callsSum,
             'byPayment' => $byPayment,
+            'sendMessage' => $sendMessage,
+            'sendError' => $sendError,
         ]);
     }
 }

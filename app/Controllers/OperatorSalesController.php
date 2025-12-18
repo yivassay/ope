@@ -21,18 +21,34 @@ final class OperatorSalesController extends BaseController
         if (($_GET['action'] ?? '') === 'save' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             // manager can save daily sales; admin can too
             $operatorId = (int)($_POST['operator_id'] ?? 0);
+            $roleMode = (string)($_POST['role_mode'] ?? 'operator'); // operator|logistic
+            if (!in_array($roleMode, ['operator', 'logistic'], true)) {
+                $roleMode = 'operator';
+            }
             $salesSum = (float)($_POST['sales_sum'] ?? 0);
             $orderCount = (int)($_POST['order_count'] ?? 0);
+            $manualSalary = (float)($_POST['manual_salary'] ?? 0);
             $note = trim((string)($_POST['note'] ?? ''));
 
-            $stmt = $this->db->prepare('INSERT INTO operator_daily_sales (sale_date, operator_id, sales_sum, order_count, note, updated_by_user_id, updated_at)
-                VALUES (:d,:op,:s,:c,:n,:u,NOW())
-                ON DUPLICATE KEY UPDATE sales_sum=VALUES(sales_sum), order_count=VALUES(order_count), note=VALUES(note), updated_by_user_id=VALUES(updated_by_user_id), updated_at=NOW()');
+            if ($roleMode === 'logistic') {
+                // logistic: salary is manual, sales/orders are not used
+                $salesSum = 0;
+                $orderCount = 0;
+            } else {
+                // operator: salary is calculated from fixed + % of sales
+                $manualSalary = 0;
+            }
+
+            $stmt = $this->db->prepare('INSERT INTO operator_daily_sales (sale_date, operator_id, sales_sum, order_count, role_mode, manual_salary, note, updated_by_user_id, updated_at)
+                VALUES (:d,:op,:s,:c,:rm,:ms,:n,:u,NOW())
+                ON DUPLICATE KEY UPDATE sales_sum=VALUES(sales_sum), order_count=VALUES(order_count), role_mode=VALUES(role_mode), manual_salary=VALUES(manual_salary), note=VALUES(note), updated_by_user_id=VALUES(updated_by_user_id), updated_at=NOW()');
             $stmt->execute([
                 'd' => $date,
                 'op' => $operatorId,
                 's' => $salesSum,
                 'c' => $orderCount,
+                'rm' => $roleMode,
+                'ms' => $manualSalary,
                 'n' => $note,
                 'u' => (int)($this->auth->id() ?? 0),
             ]);

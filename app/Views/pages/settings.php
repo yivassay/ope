@@ -88,6 +88,19 @@ require __DIR__ . '/../partials/layout_top.php';
         </div>
       </div>
 
+      <h2 class="h6 mt-4">Telegram (hisobot yuborish)</h2>
+      <div class="row g-3">
+        <div class="col-12 col-lg-6">
+          <label class="form-label">Bot token</label>
+          <input class="form-control" name="telegram_bot_token" value="<?= htmlspecialchars((string)$smartomato['telegram_bot_token']) ?>">
+        </div>
+        <div class="col-12 col-lg-6">
+          <label class="form-label">Group chat_id</label>
+          <input class="form-control" name="telegram_chat_id" value="<?= htmlspecialchars((string)$smartomato['telegram_chat_id']) ?>">
+          <div class="form-text">Masalan: <code>-1001234567890</code></div>
+        </div>
+      </div>
+
       <div class="mt-3">
         <button class="btn btn-primary" type="submit">Saqlash</button>
       </div>
