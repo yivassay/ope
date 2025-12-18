@@ -45,6 +45,9 @@ switch ($page) {
     case 'taxi':
         (new \App\Controllers\TaxiController($db, $auth))->index();
         break;
+    case 'errors':
+        (new \App\Controllers\ErrorsController($db, $auth))->index();
+        break;
     case 'profile':
         (new \App\Controllers\ProfileController($db, $auth))->index();
         break;

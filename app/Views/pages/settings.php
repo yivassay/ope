@@ -79,6 +79,15 @@ require __DIR__ . '/../partials/layout_top.php';
         </div>
       </div>
 
+      <h2 class="h6 mt-4">Restaurantlar (ID → nom)</h2>
+      <div class="row g-3">
+        <div class="col-12">
+          <label class="form-label">Restaurant list</label>
+          <textarea class="form-control" name="restaurants_map" rows="4" placeholder="50206|Mahmood Kebab Hadra&#10;50213|Mahmood Kebab Qodiriy"><?= htmlspecialchars((string)$smartomato['restaurants_map']) ?></textarea>
+          <div class="form-text">Format: har qatorda <code>restaurant_id|restaurant_name</code>. (Errors sahifasida filial tanlash uchun.)</div>
+        </div>
+      </div>
+
       <div class="mt-3">
         <button class="btn btn-primary" type="submit">Saqlash</button>
       </div>

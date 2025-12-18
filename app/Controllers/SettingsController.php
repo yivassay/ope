@@ -74,6 +74,9 @@ final class SettingsController extends BaseController
             // Taxi: restaurant keywords mapping
             $settings->set('taxi.restaurant_keywords', trim((string)($_POST['taxi_restaurant_keywords'] ?? '')));
 
+            // Restaurants mapping for UI selections: id|name
+            $settings->set('restaurants.map', trim((string)($_POST['restaurants_map'] ?? '')));
+
             $saved = true;
         }
 
@@ -92,6 +95,7 @@ final class SettingsController extends BaseController
                 'commission_wolt' => $settings->get('commission.wolt', '0'),
                 'commission_uzum' => $settings->get('commission.uzum', '0'),
                 'taxi_restaurant_keywords' => $settings->get('taxi.restaurant_keywords', ''),
+                'restaurants_map' => $settings->get('restaurants.map', ''),
             ],
         ]);
     }

@@ -8,6 +8,7 @@ return [
     'nav.telegram_bot' => 'Telegram bot',
     'nav.others' => 'Boshqalar',
     'nav.taxi' => 'Taxi',
+    'nav.errors' => 'Xatolar',
     'nav.operator_sales' => 'Operator savdo',
     'nav.operators' => 'Operatorlar',
     'nav.settings' => 'Sozlamalar',
