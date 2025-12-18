@@ -8,6 +8,8 @@
 /** @var array $stats */
 /** @var array $dupByRestaurant */
 /** @var string $mappingRaw */
+/** @var array $restaurantOptions */
+/** @var array $millennium */
 require __DIR__ . '/../partials/layout_top.php';
 
 $totalTrips = 0;
@@ -25,6 +27,13 @@ foreach ($stats as $s) {
     $totalPaidCancelSum += (float)($s['paid_cancel_sum'] ?? 0);
     $totalReturnedCnt += (int)($s['returned_count'] ?? 0);
     $totalReturnedSum += (float)($s['returned_sum'] ?? 0);
+}
+
+$millTrips = 0;
+$millSum = 0.0;
+foreach ($millennium as $m) {
+    $millTrips += (int)($m['trips_count'] ?? 0);
+    $millSum += (float)($m['sum_total'] ?? 0);
 }
 ?>
 
@@ -83,6 +92,7 @@ foreach ($stats as $s) {
       <div class="card-body py-3">
         <div class="text-muted small">Po‘ezdka (count)</div>
         <div class="fs-5 fw-semibold"><?= number_format($totalTrips, 0, '.', ' ') ?></div>
+        <div class="text-muted small">(+ Millennium: <?= number_format($millTrips, 0, '.', ' ') ?>)</div>
       </div>
     </div>
   </div>
@@ -90,8 +100,8 @@ foreach ($stats as $s) {
     <div class="card">
       <div class="card-body py-3">
         <div class="text-muted small">Summa (jami)</div>
-        <div class="fs-5 fw-semibold"><?= number_format($totalSum + $totalPaidCancelSum + $totalReturnedSum, 2, '.', ' ') ?></div>
-        <div class="text-muted small">(+ платная отмена + возврат)</div>
+        <div class="fs-5 fw-semibold"><?= number_format($totalSum + $totalPaidCancelSum + $totalReturnedSum + $millSum, 2, '.', ' ') ?></div>
+        <div class="text-muted small">(+ платная отмена + возврат + Millennium)</div>
       </div>
     </div>
   </div>
@@ -177,6 +187,67 @@ foreach ($stats as $s) {
             <?php endforeach; ?>
             <?php if (!$stats): ?>
               <tr><td colspan="11" class="text-muted">Bu sanada import qilinmagan.</td></tr>
+            <?php endif; ?>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-6">
+    <div class="card">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <h2 class="h6 mb-0">Millennium taxi (qo‘lda)</h2>
+        </div>
+        <form method="post" action="?page=taxi&action=millennium_save&date=<?= urlencode($date) ?>" class="row g-2 mt-2">
+          <div class="col-12">
+            <label class="form-label">Restaurant</label>
+            <?php if ($restaurantOptions): ?>
+              <select class="form-select" name="restaurant_name" required>
+                <option value="">Tanlang</option>
+                <?php foreach ($restaurantOptions as $r): ?>
+                  <option value="<?= htmlspecialchars($r) ?>"><?= htmlspecialchars($r) ?></option>
+                <?php endforeach; ?>
+              </select>
+            <?php else: ?>
+              <input class="form-control" name="restaurant_name" placeholder="Restaurant nomi" required>
+              <div class="form-text">Agar drop-down bo‘sh bo‘lsa: Settings → Taxi mapping ni kiriting.</div>
+            <?php endif; ?>
+          </div>
+          <div class="col-6">
+            <label class="form-label">Po‘ezdka soni</label>
+            <input class="form-control" name="trips_count" value="0" required>
+          </div>
+          <div class="col-6">
+            <label class="form-label">Summa</label>
+            <input class="form-control" name="sum_total" value="0" required>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Izoh</label>
+            <input class="form-control" name="note" value="">
+          </div>
+          <div class="col-12">
+            <button class="btn btn-success" type="submit">Saqlash</button>
+          </div>
+        </form>
+
+        <hr>
+        <div class="table-responsive">
+          <table class="table table-sm mb-0">
+            <thead><tr><th>Restaurant</th><th class="text-end">Cnt</th><th class="text-end">Summa</th><th>Izoh</th></tr></thead>
+            <tbody>
+            <?php foreach ($millennium as $m): ?>
+              <tr>
+                <td><?= htmlspecialchars((string)$m['restaurant_name']) ?></td>
+                <td class="text-end"><?= number_format((int)$m['trips_count'], 0, '.', ' ') ?></td>
+                <td class="text-end"><?= number_format((float)$m['sum_total'], 2, '.', ' ') ?></td>
+                <td class="text-muted small"><?= htmlspecialchars((string)($m['note'] ?? '')) ?></td>
+              </tr>
+            <?php endforeach; ?>
+            <?php if (!$millennium): ?>
+              <tr><td colspan="4" class="text-muted">Hozircha ma'lumot yo‘q.</td></tr>
             <?php endif; ?>
             </tbody>
           </table>

@@ -26,9 +26,39 @@ final class TaxiController extends BaseController
         $settings = new Settings($this->db);
         $mappingRaw = (string)$settings->get('taxi.restaurant_keywords', '');
         $restaurantKeywords = $this->parseRestaurantKeywords($mappingRaw);
+        $restaurantOptions = $this->restaurantOptionsFromKeywords($restaurantKeywords);
 
         $message = null;
         $error = null;
+
+        if (($_GET['action'] ?? '') === 'millennium_save' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+            $restaurant = trim((string)($_POST['restaurant_name'] ?? ''));
+            $tripsCount = (int)($_POST['trips_count'] ?? 0);
+            $sumTotal = $this->parseMoney((string)($_POST['sum_total'] ?? '0'));
+            $note = trim((string)($_POST['note'] ?? ''));
+
+            if ($restaurant === '') {
+                $error = 'Restaurant tanlanmagan';
+            } else {
+                try {
+                    $stmt = $this->db->prepare('INSERT INTO millennium_taxi_daily_stats (stat_date, restaurant_name, trips_count, sum_total, note, updated_by_user_id, updated_at)
+                        VALUES (:d,:rn,:c,:s,:n,:u,NOW())
+                        ON DUPLICATE KEY UPDATE trips_count=VALUES(trips_count), sum_total=VALUES(sum_total), note=VALUES(note), updated_by_user_id=VALUES(updated_by_user_id), updated_at=NOW()');
+                    $stmt->execute([
+                        'd' => $date,
+                        'rn' => $restaurant,
+                        'c' => $tripsCount,
+                        's' => $sumTotal,
+                        'n' => $note,
+                        'u' => (int)($this->auth->id() ?? 0),
+                    ]);
+                    Response::redirect('?page=taxi&date=' . urlencode($date));
+                    return;
+                } catch (Throwable $e) {
+                    $error = $e->getMessage();
+                }
+            }
+        }
 
         if (($_GET['action'] ?? '') === 'upload' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!isset($_FILES['file']) || !is_array($_FILES['file'])) {
@@ -292,6 +322,15 @@ final class TaxiController extends BaseController
         $dups->execute(['d' => $date]);
         $dupByRestaurant = $dups->fetchAll(PDO::FETCH_ASSOC);
 
+        $mill = [];
+        try {
+            $stmt = $this->db->prepare('SELECT * FROM millennium_taxi_daily_stats WHERE stat_date = :d ORDER BY restaurant_name');
+            $stmt->execute(['d' => $date]);
+            $mill = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Throwable) {
+            $mill = [];
+        }
+
         $this->render('pages/taxi', [
             'date' => $date,
             'message' => $message,
@@ -300,6 +339,8 @@ final class TaxiController extends BaseController
             'stats' => $stats,
             'dupByRestaurant' => $dupByRestaurant,
             'mappingRaw' => $mappingRaw,
+            'restaurantOptions' => $restaurantOptions,
+            'millennium' => $mill,
         ]);
     }
 
@@ -333,6 +374,18 @@ final class TaxiController extends BaseController
             }
         }
         return null;
+    }
+
+    private function restaurantOptionsFromKeywords(array $keywords): array
+    {
+        $names = [];
+        foreach ($keywords as $k) {
+            $n = (string)($k['name'] ?? '');
+            if ($n !== '') $names[$n] = true;
+        }
+        $out = array_keys($names);
+        sort($out);
+        return $out;
     }
 
     private function normalizeAddress(string $a): string
