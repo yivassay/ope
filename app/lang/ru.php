@@ -4,7 +4,7 @@ declare(strict_types=1);
 return [
     'app.title' => 'Аналитика колл-центра',
     'nav.dashboard' => 'Dashboard',
-    'nav.bugungi' => 'Bugungi',
+    'nav.bugungi' => 'Сегодня',
     'nav.smartomato' => 'Smartomato',
     'nav.telegram_bot' => 'Telegram bot',
     'nav.others' => 'Прочее',

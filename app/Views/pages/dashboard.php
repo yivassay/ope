@@ -47,8 +47,8 @@ foreach ($labels as $d) {
     $avgCheck[] = (float)$o['avg'];
 
     $salary[] = (float)(($salaryByDate[$d]['salary'] ?? 0));
-    $t = (float)(($taxiByDate[$d]['taxi'] ?? 0)) + (float)(($millByDate[$d]['mill'] ?? 0));
-    $taxi[] = $t;
+    $taxiSum = (float)(($taxiByDate[$d]['taxi'] ?? 0)) + (float)(($millByDate[$d]['mill'] ?? 0));
+    $taxi[] = $taxiSum;
     $errors[] = (float)(($errByDate[$d]['errors'] ?? 0));
 
     $a = $aggByDate[$d] ?? ['yandex' => 0, 'wolt' => 0, 'uzum' => 0];
