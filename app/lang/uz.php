@@ -33,6 +33,8 @@ return [
     'common.active' => 'Active',
     'common.off' => 'Off',
     'common.edit' => 'Edit',
+    'common.delete' => "O‘chirish",
+    'common.confirm_delete' => 'O‘chirilsinmi?',
     'common.orders_count' => 'Buyurtma soni',
     'common.note' => 'Izoh',
     'common.select' => 'Tanlang',
@@ -177,6 +179,12 @@ return [
     'operator_sales.col.note' => 'Izoh',
     'operator_sales.action.enter' => 'Kiritish',
     'operator_sales.err.schema' => "Baza yangilanmagan: smena/zarplata ustunlarini qo‘shing (schema.sql).",
+    'operator_sales.add' => 'Xodim qo‘shish',
+    'operator_sales.col.actions' => 'Amallar',
+    'operator_sales.empty' => "Hozircha ma’lumot yo‘q. “Xodim qo‘shish” tugmasi orqali qo‘shing.",
+    'operator_sales.hint.multi_shift' => "Bitta xodimni kunduz va tungi smenaga alohida qo‘shish mumkin.",
+
+    'mask.title' => 'Maska',
 
     'settings.title' => 'Sozlamalar',
     'settings.saved' => 'Saqlandi',

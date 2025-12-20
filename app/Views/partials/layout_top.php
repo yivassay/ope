@@ -15,7 +15,8 @@ if (!in_array($locale, ['uz', 'ru'], true)) $locale = 'uz';
   <link rel="stylesheet" href="assets/wowdash/css/style.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
-<body>
+<?php $maskMode = !empty($_SESSION['mask_mode']); ?>
+<body data-mask="<?= $maskMode ? '1' : '0' ?>">
 <div class="body-overlay"></div>
 
 <aside class="sidebar">
@@ -23,18 +24,20 @@ if (!in_array($locale, ['uz', 'ru'], true)) $locale = 'uz';
     <iconify-icon icon="radix-icons:cross-2"></iconify-icon>
   </button>
   <div>
-    <a href="?page=dashboard" class="sidebar-logo">
+    <a href="?page=<?= (($auth->role() ?? '') === 'callcenter_manager') ? 'bugungi' : 'dashboard' ?>" class="sidebar-logo">
       <span class="fw-bold text-primary-600"><?= htmlspecialchars($t->t('app.title')) ?></span>
     </a>
   </div>
   <div class="sidebar-menu-area">
     <ul class="sidebar-menu" id="sidebar-menu">
-      <li>
-        <a href="?page=dashboard">
-          <iconify-icon icon="solar:chart-2-outline" class="menu-icon"></iconify-icon>
-          <span><?= htmlspecialchars($t->t('nav.dashboard')) ?></span>
-        </a>
-      </li>
+      <?php if (($auth->role() ?? '') === 'admin'): ?>
+        <li>
+          <a href="?page=dashboard">
+            <iconify-icon icon="solar:chart-2-outline" class="menu-icon"></iconify-icon>
+            <span><?= htmlspecialchars($t->t('nav.dashboard')) ?></span>
+          </a>
+        </li>
+      <?php endif; ?>
       <li>
         <a href="?page=bugungi">
           <iconify-icon icon="solar:calendar-date-outline" class="menu-icon"></iconify-icon>
@@ -105,6 +108,12 @@ if (!in_array($locale, ['uz', 'ru'], true)) $locale = 'uz';
       </div>
       <div class="col-auto">
         <div class="d-flex flex-wrap align-items-center gap-3">
+          <a class="w-40-px h-40-px bg-neutral-200 rounded-circle d-flex justify-content-center align-items-center text-neutral-900"
+             href="?<?= htmlspecialchars(http_build_query(array_merge($_GET, ['mask' => $maskMode ? '0' : '1']))) ?>"
+             title="<?= htmlspecialchars($t->t('mask.title', 'Mask')) ?>">
+            <span class="fw-bold">*</span>
+          </a>
+
           <div class="dropdown d-inline-block">
             <button class="w-40-px h-40-px bg-neutral-200 rounded-circle d-flex justify-content-center align-items-center"
                     type="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -143,4 +152,24 @@ if (!in_array($locale, ['uz', 'ru'], true)) $locale = 'uz';
 
   <div class="dashboard-main-body">
     <div class="container-fluid py-3">
+
+      <script>
+        (function () {
+          try {
+            const enabled = document.body?.dataset?.mask === '1';
+            if (!enabled) return;
+            const skipTags = new Set(['SCRIPT', 'STYLE', 'CANVAS', 'INPUT', 'TEXTAREA', 'SELECT', 'OPTION']);
+            document.querySelectorAll('*').forEach((el) => {
+              if (!el || skipTags.has(el.tagName)) return;
+              if (el.children && el.children.length > 0) return; // only leaf elements
+              const txt = (el.textContent || '').trim();
+              if (!txt) return;
+              if (!/\d/.test(txt)) return;
+              el.textContent = '***';
+            });
+          } catch (e) {
+            // ignore
+          }
+        })();
+      </script>
 

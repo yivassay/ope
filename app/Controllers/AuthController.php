@@ -14,6 +14,10 @@ final class AuthController extends BaseController
             $username = trim((string)($_POST['username'] ?? ''));
             $password = (string)($_POST['password'] ?? '');
             if ($this->auth->attempt($username, $password)) {
+                if (($this->auth->role() ?? '') === 'callcenter_manager') {
+                    Response::redirect('?page=bugungi');
+                    return;
+                }
                 Response::redirect('?page=dashboard');
                 return;
             }

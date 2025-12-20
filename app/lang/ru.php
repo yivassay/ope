@@ -33,6 +33,8 @@ return [
     'common.active' => 'Активен',
     'common.off' => 'Выключен',
     'common.edit' => 'Редактировать',
+    'common.delete' => 'Удалить',
+    'common.confirm_delete' => 'Удалить?',
     'common.orders_count' => 'Кол-во заказов',
     'common.note' => 'Комментарий',
     'common.select' => 'Выбрать',
@@ -177,6 +179,12 @@ return [
     'operator_sales.col.note' => 'Комментарий',
     'operator_sales.action.enter' => 'Ввести',
     'operator_sales.err.schema' => 'База не обновлена: добавьте колонки смена/оклад (schema.sql).',
+    'operator_sales.add' => 'Добавить сотрудника',
+    'operator_sales.col.actions' => 'Действия',
+    'operator_sales.empty' => 'Пока нет данных. Добавьте сотрудника кнопкой “Добавить сотрудника”.',
+    'operator_sales.hint.multi_shift' => 'Одного сотрудника можно добавить отдельно на день и на ночь.',
+
+    'mask.title' => 'Маска',
 
     'settings.title' => 'Настройки',
     'settings.saved' => 'Сохранено',
