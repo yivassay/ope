@@ -21,11 +21,20 @@ require __DIR__ . '/../partials/layout_top.php';
           <div class="col-12 col-lg-4">
             <input class="form-control" name="name" placeholder="<?= htmlspecialchars($t->t('operators.name', 'Ism')) ?>" required>
           </div>
-          <div class="col-6 col-lg-3">
+          <div class="col-6 col-lg-2">
             <input class="form-control" name="fixed_salary" placeholder="<?= htmlspecialchars($t->t('operators.fixed', "Fix (so'm)")) ?>" value="0">
           </div>
-          <div class="col-6 col-lg-3">
+          <div class="col-6 col-lg-2">
+            <input class="form-control" name="fixed_salary_day" placeholder="<?= htmlspecialchars($t->t('operators.fixed_day', "Fix day")) ?>" value="0">
+          </div>
+          <div class="col-6 col-lg-2">
+            <input class="form-control" name="fixed_salary_night" placeholder="<?= htmlspecialchars($t->t('operators.fixed_night', "Fix night")) ?>" value="0">
+          </div>
+          <div class="col-6 col-lg-2">
             <input class="form-control" name="percent_rate" placeholder="<?= htmlspecialchars($t->t('operators.percent', '%')) ?>" value="0">
+          </div>
+          <div class="col-6 col-lg-2">
+            <input class="form-control" name="guaranteed_salary" placeholder="<?= htmlspecialchars($t->t('operators.guaranteed', 'Zarplata')) ?>" value="0">
           </div>
           <div class="col-12 col-lg-2 d-flex align-items-center gap-2">
             <div class="form-check">
@@ -47,7 +56,10 @@ require __DIR__ . '/../partials/layout_top.php';
       <tr>
         <th><?= htmlspecialchars($t->t('operators.name', 'Ism')) ?></th>
         <th><?= htmlspecialchars($t->t('operators.fixed_short', 'Fix')) ?></th>
+        <th><?= htmlspecialchars($t->t('operators.fixed_day_short', 'Day')) ?></th>
+        <th><?= htmlspecialchars($t->t('operators.fixed_night_short', 'Night')) ?></th>
         <th><?= htmlspecialchars($t->t('operators.percent', '%')) ?></th>
+        <th><?= htmlspecialchars($t->t('operators.guaranteed_short', 'Zarplata')) ?></th>
         <th><?= htmlspecialchars($t->t('common.status', 'Status')) ?></th>
         <?php if (($auth->role() ?? '') === 'admin'): ?><th></th><?php endif; ?>
       </tr>
@@ -56,8 +68,11 @@ require __DIR__ . '/../partials/layout_top.php';
       <?php foreach ($operators as $op): ?>
         <tr>
           <td><?= htmlspecialchars((string)$op['name']) ?></td>
-          <td><?= htmlspecialchars((string)$op['fixed_salary']) ?></td>
+          <td><?= htmlspecialchars((string)($op['fixed_salary'] ?? '0')) ?></td>
+          <td><?= htmlspecialchars((string)($op['fixed_salary_day'] ?? ($op['fixed_salary'] ?? '0'))) ?></td>
+          <td><?= htmlspecialchars((string)($op['fixed_salary_night'] ?? ($op['fixed_salary'] ?? '0'))) ?></td>
           <td><?= htmlspecialchars((string)$op['percent_rate']) ?></td>
+          <td><?= htmlspecialchars((string)($op['guaranteed_salary'] ?? '0')) ?></td>
           <td><?= ((int)$op['is_active'] === 1) ? htmlspecialchars($t->t('common.active', 'Active')) : htmlspecialchars($t->t('common.off', 'Off')) ?></td>
           <?php if (($auth->role() ?? '') === 'admin'): ?>
             <td class="text-end">
@@ -67,17 +82,26 @@ require __DIR__ . '/../partials/layout_top.php';
         </tr>
         <?php if (($auth->role() ?? '') === 'admin'): ?>
           <tr class="collapse" id="edit<?= (int)$op['id'] ?>">
-            <td colspan="5">
+            <td colspan="8">
               <form method="post" action="?page=operators&action=save" class="row g-2">
                 <input type="hidden" name="id" value="<?= (int)$op['id'] ?>">
                 <div class="col-12 col-lg-4">
                   <input class="form-control" name="name" value="<?= htmlspecialchars((string)$op['name']) ?>" required>
                 </div>
-                <div class="col-6 col-lg-3">
-                  <input class="form-control" name="fixed_salary" value="<?= htmlspecialchars((string)$op['fixed_salary']) ?>">
+                <div class="col-6 col-lg-2">
+                  <input class="form-control" name="fixed_salary" value="<?= htmlspecialchars((string)($op['fixed_salary'] ?? '0')) ?>" placeholder="<?= htmlspecialchars($t->t('operators.fixed_short', 'Fix')) ?>">
                 </div>
-                <div class="col-6 col-lg-3">
+                <div class="col-6 col-lg-2">
+                  <input class="form-control" name="fixed_salary_day" value="<?= htmlspecialchars((string)($op['fixed_salary_day'] ?? ($op['fixed_salary'] ?? '0'))) ?>" placeholder="<?= htmlspecialchars($t->t('operators.fixed_day', 'Fix day')) ?>">
+                </div>
+                <div class="col-6 col-lg-2">
+                  <input class="form-control" name="fixed_salary_night" value="<?= htmlspecialchars((string)($op['fixed_salary_night'] ?? ($op['fixed_salary'] ?? '0'))) ?>" placeholder="<?= htmlspecialchars($t->t('operators.fixed_night', 'Fix night')) ?>">
+                </div>
+                <div class="col-6 col-lg-2">
                   <input class="form-control" name="percent_rate" value="<?= htmlspecialchars((string)$op['percent_rate']) ?>">
+                </div>
+                <div class="col-6 col-lg-2">
+                  <input class="form-control" name="guaranteed_salary" value="<?= htmlspecialchars((string)($op['guaranteed_salary'] ?? '0')) ?>" placeholder="<?= htmlspecialchars($t->t('operators.guaranteed', 'Zarplata')) ?>">
                 </div>
                 <div class="col-12 col-lg-2 d-flex align-items-center gap-2">
                   <div class="form-check">

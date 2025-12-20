@@ -100,29 +100,63 @@ final class BugungiController extends BaseController
             $uzum = ['cnt' => 0, 'sum_final' => 0];
         }
 
-        // Expenses: salary for day
+        // Expenses: salary for day (supports day/night shifts)
         $salarySum = 0.0;
         $salaryRows = [];
         try {
+            // Prefer new schema with shift + fixed_day/night + guaranteed
             $stmt = $this->db->prepare('
-                SELECT o.name, ods.role_mode, ods.order_count, ods.sales_sum, ods.manual_salary,
-                       CASE
-                         WHEN ods.role_mode="logistic" THEN ods.manual_salary
-                         ELSE (o.fixed_salary + (ods.sales_sum * o.percent_rate / 100.0))
-                       END AS salary_value
+                SELECT o.id AS operator_id, o.name, o.fixed_salary, o.fixed_salary_day, o.fixed_salary_night, o.percent_rate, o.guaranteed_salary,
+                       ods.shift, ods.role_mode, ods.order_count, ods.sales_sum, ods.manual_salary
                 FROM operator_daily_sales ods
                 JOIN operators o ON o.id = ods.operator_id
                 WHERE ods.sale_date = :d
-                ORDER BY o.name
+                ORDER BY o.name, ods.shift
             ');
             $stmt->execute(['d' => $date]);
-            $salaryRows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            foreach ($salaryRows as $r) {
-                $salarySum += (float)($r['salary_value'] ?? 0);
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($rows as $r) {
+                $mode = (string)($r['role_mode'] ?? 'operator');
+                $shift = (string)($r['shift'] ?? 'day');
+                $fixedLegacy = (float)($r['fixed_salary'] ?? 0);
+                $fixedDay = (float)($r['fixed_salary_day'] ?? 0);
+                $fixedNight = (float)($r['fixed_salary_night'] ?? 0);
+                if ($fixedDay <= 0) $fixedDay = $fixedLegacy;
+                if ($fixedNight <= 0) $fixedNight = $fixedLegacy;
+                $fixed = ($shift === 'night') ? $fixedNight : $fixedDay;
+                $pct = (float)($r['percent_rate'] ?? 0);
+                $guaranteed = (float)($r['guaranteed_salary'] ?? 0);
+                $salesSum = (float)($r['sales_sum'] ?? 0);
+                $manualSalary = (float)($r['manual_salary'] ?? 0);
+                $base = $fixed + ($salesSum * $pct / 100.0);
+                $salaryValue = ($mode === 'logistic') ? $manualSalary : max($base, $guaranteed);
+                $r['salary_value'] = $salaryValue;
+                $salaryRows[] = $r;
+                $salarySum += $salaryValue;
             }
         } catch (Throwable) {
-            $salarySum = 0.0;
-            $salaryRows = [];
+            // Fallback for old schema (no shift / no guaranteed / no fixed_day/night)
+            try {
+                $stmt = $this->db->prepare('
+                    SELECT o.name, ods.role_mode, ods.order_count, ods.sales_sum, ods.manual_salary,
+                           CASE
+                             WHEN ods.role_mode="logistic" THEN ods.manual_salary
+                             ELSE (o.fixed_salary + (ods.sales_sum * o.percent_rate / 100.0))
+                           END AS salary_value
+                    FROM operator_daily_sales ods
+                    JOIN operators o ON o.id = ods.operator_id
+                    WHERE ods.sale_date = :d
+                    ORDER BY o.name
+                ');
+                $stmt->execute(['d' => $date]);
+                $salaryRows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                foreach ($salaryRows as $r) {
+                    $salarySum += (float)($r['salary_value'] ?? 0);
+                }
+            } catch (Throwable) {
+                $salarySum = 0.0;
+                $salaryRows = [];
+            }
         }
 
         // Taxi yandex sums (optionally filter by restaurantName via mapping)
@@ -353,6 +387,12 @@ final class BugungiController extends BaseController
                 $lines[] = "<b>🙂Ishchilar:</b>";
                 foreach ($salaryRows as $r) {
                     $name = (string)$r['name'];
+                    $shift = (string)($r['shift'] ?? '');
+                    if ($shift === 'night') {
+                        $name .= ' (tungi)';
+                    } elseif ($shift === 'day') {
+                        $name .= ' (kunduz)';
+                    }
                     $mode = (string)$r['role_mode'];
                     $sal = (float)($r['salary_value'] ?? 0);
                     if ($mode === 'logistic') {

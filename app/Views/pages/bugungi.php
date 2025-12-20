@@ -416,23 +416,25 @@ $taxiDiff = $taxiGross - (float)$clientPaidDelivery;
     <div class="card"><div class="card-body">
       <div class="table-responsive">
         <table class="table table-sm mb-0">
-          <thead><tr><th><?= htmlspecialchars($t->t('staff.name', 'Ism')) ?></th><th><?= htmlspecialchars($t->t('operator_sales.col.mode', 'Rejim')) ?></th><th class="text-end"><?= htmlspecialchars($t->t('staff.salary', 'Ish haqi')) ?></th><th class="text-end"><?= htmlspecialchars($t->t('staff.orders', 'Buyurtma')) ?></th></tr></thead>
+          <thead><tr><th><?= htmlspecialchars($t->t('staff.name', 'Ism')) ?></th><th><?= htmlspecialchars($t->t('operator_sales.col.shift', 'Smena')) ?></th><th><?= htmlspecialchars($t->t('operator_sales.col.mode', 'Rejim')) ?></th><th class="text-end"><?= htmlspecialchars($t->t('staff.salary', 'Ish haqi')) ?></th><th class="text-end"><?= htmlspecialchars($t->t('staff.orders', 'Buyurtma')) ?></th></tr></thead>
           <tbody>
           <?php foreach (($salaryRows ?? []) as $r): ?>
             <?php
               $mode = (string)($r['role_mode'] ?? '');
+              $shift = (string)($r['shift'] ?? 'day');
               $oc = (int)($r['order_count'] ?? 0);
               $sal = (float)($r['salary_value'] ?? 0);
             ?>
             <tr>
               <td><?= htmlspecialchars((string)$r['name']) ?></td>
+              <td><?= htmlspecialchars($t->t('shift.' . $shift, $shift)) ?></td>
               <td><?= htmlspecialchars(($mode === 'logistic') ? $t->t('mode.logistic', 'Logist') : $t->t('mode.operator', 'Operator')) ?></td>
               <td class="text-end"><?= money($sal) ?></td>
               <td class="text-end"><?= ($mode === 'logistic') ? htmlspecialchars($t->t('mode.logistic_short', 'logist')) : num0($oc) ?></td>
             </tr>
           <?php endforeach; ?>
           <?php if (!($salaryRows ?? [])): ?>
-            <tr><td colspan="4" class="text-muted"><?= htmlspecialchars($t->t('staff.empty', "Hozircha ish haqi kiritilmagan.")) ?></td></tr>
+            <tr><td colspan="5" class="text-muted"><?= htmlspecialchars($t->t('staff.empty', "Hozircha ish haqi kiritilmagan.")) ?></td></tr>
           <?php endif; ?>
           </tbody>
         </table>

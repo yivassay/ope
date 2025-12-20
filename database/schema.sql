@@ -23,7 +23,10 @@ CREATE TABLE IF NOT EXISTS operators (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   name VARCHAR(190) NOT NULL,
   fixed_salary DECIMAL(12,2) NOT NULL DEFAULT 0,
+  fixed_salary_day DECIMAL(12,2) NOT NULL DEFAULT 0,
+  fixed_salary_night DECIMAL(12,2) NOT NULL DEFAULT 0,
   percent_rate DECIMAL(6,3) NOT NULL DEFAULT 0,
+  guaranteed_salary DECIMAL(12,2) NOT NULL DEFAULT 0,
   is_active TINYINT(1) NOT NULL DEFAULT 1,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
@@ -33,6 +36,7 @@ CREATE TABLE IF NOT EXISTS operators (
 CREATE TABLE IF NOT EXISTS operator_daily_sales (
   sale_date DATE NOT NULL,
   operator_id BIGINT UNSIGNED NOT NULL,
+  shift ENUM('day','night') NOT NULL DEFAULT 'day',
   sales_sum DECIMAL(14,2) NOT NULL DEFAULT 0,
   order_count INT UNSIGNED NOT NULL DEFAULT 0,
   role_mode ENUM('operator','logistic') NOT NULL DEFAULT 'operator',
@@ -40,7 +44,7 @@ CREATE TABLE IF NOT EXISTS operator_daily_sales (
   note VARCHAR(255) NOT NULL DEFAULT '',
   updated_by_user_id BIGINT UNSIGNED NOT NULL DEFAULT 0,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (sale_date, operator_id),
+  PRIMARY KEY (sale_date, operator_id, shift),
   KEY idx_operator_daily_sales_date (sale_date),
   KEY idx_operator_daily_sales_operator (operator_id, sale_date)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

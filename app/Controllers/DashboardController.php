@@ -75,12 +75,17 @@ final class DashboardController extends BaseController
         // - logistic: manual_salary (100%)
         $salaryByDate = [];
         try {
+            // Prefer new schema with shift + fixed_day/night + guaranteed salary
             $stmt = $this->db->prepare('
                 SELECT ods.sale_date,
                        COALESCE(SUM(
                           CASE
                             WHEN ods.role_mode = "logistic" THEN ods.manual_salary
-                            ELSE (o.fixed_salary + (ods.sales_sum * o.percent_rate / 100.0))
+                            ELSE GREATEST(
+                              (CASE WHEN ods.shift="night" THEN COALESCE(NULLIF(o.fixed_salary_night,0), o.fixed_salary) ELSE COALESCE(NULLIF(o.fixed_salary_day,0), o.fixed_salary) END)
+                              + (ods.sales_sum * o.percent_rate / 100.0),
+                              COALESCE(o.guaranteed_salary, 0)
+                            )
                           END
                        ),0) AS salary_sum
                 FROM operator_daily_sales ods
@@ -95,7 +100,30 @@ final class DashboardController extends BaseController
                 $salaryByDate[$d] = ['salary' => (float)($r['salary_sum'] ?? 0)];
             }
         } catch (\Throwable) {
-            $salaryByDate = [];
+            // Fallback for old schema
+            try {
+                $stmt = $this->db->prepare('
+                    SELECT ods.sale_date,
+                           COALESCE(SUM(
+                              CASE
+                                WHEN ods.role_mode = "logistic" THEN ods.manual_salary
+                                ELSE (o.fixed_salary + (ods.sales_sum * o.percent_rate / 100.0))
+                              END
+                           ),0) AS salary_sum
+                    FROM operator_daily_sales ods
+                    JOIN operators o ON o.id = ods.operator_id
+                    WHERE ods.sale_date BETWEEN :s AND :e
+                    GROUP BY ods.sale_date
+                    ORDER BY ods.sale_date
+                ');
+                $stmt->execute(['s' => $from, 'e' => $to]);
+                foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+                    $d = (string)$r['sale_date'];
+                    $salaryByDate[$d] = ['salary' => (float)($r['salary_sum'] ?? 0)];
+                }
+            } catch (\Throwable) {
+                $salaryByDate = [];
+            }
         }
 
         // Taxi costs per day (Yandex + paid cancel + returned) + Millennium
@@ -247,7 +275,7 @@ final class DashboardController extends BaseController
             foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
                 $opNames[(int)$r['id']] = (string)$r['name'];
             }
-            $stmt = $this->db->prepare("SELECT sale_date, operator_id, COALESCE(sales_sum,0) AS cnt FROM operator_daily_sales WHERE sale_date BETWEEN ? AND ? AND operator_id IN ($in)");
+            $stmt = $this->db->prepare("SELECT sale_date, operator_id, COALESCE(SUM(sales_sum),0) AS cnt FROM operator_daily_sales WHERE sale_date BETWEEN ? AND ? AND operator_id IN ($in) GROUP BY sale_date, operator_id");
             $stmt->execute(array_merge([$from, $to], $opIds));
             foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
                 $oid = (int)$r['operator_id'];
