@@ -18,16 +18,16 @@ final class ProfileController extends BaseController
             $new2 = (string)($_POST['new_password2'] ?? '');
 
             if ($new === '' || $new !== $new2) {
-                $error = 'Yangi parol mos emas';
+                $error = $this->i18n->t('profile.error.mismatch', 'Yangi parol mos emas');
             } elseif (strlen($new) < 6) {
-                $error = 'Yangi parol kamida 6 ta belgidan iborat bo‘lsin';
+                $error = $this->i18n->t('profile.error.short', 'Yangi parol kamida 6 ta belgidan iborat bo‘lsin');
             } else {
                 // verify current password
                 $stmt = $this->db->prepare('SELECT password_hash FROM users WHERE id = :id LIMIT 1');
                 $stmt->execute(['id' => (int)$this->auth->id()]);
                 $row = $stmt->fetch();
                 if (!$row || !password_verify($current, (string)$row['password_hash'])) {
-                    $error = 'Joriy parol noto‘g‘ri';
+                    $error = $this->i18n->t('profile.error.wrong_current', 'Joriy parol noto‘g‘ri');
                 } else {
                     $hash = password_hash($new, PASSWORD_DEFAULT);
                     $upd = $this->db->prepare('UPDATE users SET password_hash = :h WHERE id = :id');

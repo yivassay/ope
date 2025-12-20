@@ -56,7 +56,7 @@ final class ErrorsController extends BaseController
             if ($targetType === 'operator') {
                 $operatorId = (int)($_POST['operator_id'] ?? 0);
                 if ($operatorId <= 0) {
-                    $error = 'Operator tanlanmagan';
+                    $error = $this->i18n->t('errors.err.no_operator', 'Operator tanlanmagan');
                 }
             } elseif ($targetType === 'restaurant') {
                 $ridRaw = (string)($_POST['restaurant_id'] ?? '');
@@ -67,10 +67,10 @@ final class ErrorsController extends BaseController
                     $restaurantName = $restaurantMap[(string)$restaurantId] ?? ('Restaurant ' . $restaurantId);
                 }
                 if (($restaurantId === null || $restaurantId <= 0) && $restaurantName === '') {
-                    $error = 'Restaurant tanlanmagan';
+                    $error = $this->i18n->t('errors.err.no_restaurant', 'Restaurant tanlanmagan');
                 }
             } else {
-                $error = 'Target type noto‘g‘ri';
+                $error = $this->i18n->t('errors.err.bad_target', 'Target type noto‘g‘ri');
             }
 
             if ($error === null) {

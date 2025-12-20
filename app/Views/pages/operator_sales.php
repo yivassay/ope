@@ -54,7 +54,7 @@ require __DIR__ . '/../partials/layout_top.php';
           <td>
             <?= htmlspecialchars((string)$op['name']) ?>
             <?php if ((int)$op['is_active'] !== 1): ?>
-              <span class="badge text-bg-secondary">Off</span>
+              <span class="badge text-bg-secondary"><?= htmlspecialchars($t->t('common.off', 'Off')) ?></span>
             <?php endif; ?>
           </td>
           <td class="text-end"><?= number_format($fixed, 2, '.', ' ') ?></td>

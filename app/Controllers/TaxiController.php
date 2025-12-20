@@ -38,7 +38,7 @@ final class TaxiController extends BaseController
             $note = trim((string)($_POST['note'] ?? ''));
 
             if ($restaurant === '') {
-                $error = 'Restaurant tanlanmagan';
+                $error = $this->i18n->t('taxi.err.no_restaurant', 'Restaurant tanlanmagan');
             } else {
                 try {
                     $stmt = $this->db->prepare('INSERT INTO millennium_taxi_daily_stats (stat_date, restaurant_name, trips_count, sum_total, note, updated_by_user_id, updated_at)
@@ -62,19 +62,19 @@ final class TaxiController extends BaseController
 
         if (($_GET['action'] ?? '') === 'upload' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!isset($_FILES['file']) || !is_array($_FILES['file'])) {
-                $error = 'Fayl topilmadi';
+                $error = $this->i18n->t('taxi.err.no_file', 'Fayl topilmadi');
             } else {
                 try {
                     $tmp = $_FILES['file']['tmp_name'] ?? '';
                     $name = (string)($_FILES['file']['name'] ?? 'taxi.csv');
                     if ($tmp === '' || !is_uploaded_file($tmp)) {
-                        throw new RuntimeException('Fayl yuklanmadi');
+                        throw new RuntimeException($this->i18n->t('taxi.err.upload_failed', 'Fayl yuklanmadi'));
                     }
 
                     $reader = new CsvReader();
                     $rows = $reader->read($tmp);
                     if (count($rows) < 2) {
-                        throw new RuntimeException('CSV bo‘sh yoki format noto‘g‘ri');
+                        throw new RuntimeException($this->i18n->t('taxi.err.bad_csv', 'CSV bo‘sh yoki format noto‘g‘ri'));
                     }
 
                     $header = $rows[0];
@@ -471,8 +471,9 @@ final class TaxiController extends BaseController
 
         $sample = array_slice($headerList, 0, 20);
         throw new RuntimeException(
-            'Ustun topilmadi. Qidirildi: ' . implode(' / ', array_map('strval', $candidates)) .
-            '. Header (first 20): ' . implode(' | ', $sample)
+            $this->i18n->t('taxi.err.column_not_found', 'Ustun topilmadi.') . ' ' .
+            $this->i18n->t('taxi.err.searched', 'Qidirildi') . ': ' . implode(' / ', array_map('strval', $candidates)) .
+            '. ' . $this->i18n->t('taxi.err.header_first', 'Header (first 20)') . ': ' . implode(' | ', $sample)
         );
     }
 

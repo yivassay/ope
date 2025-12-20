@@ -112,6 +112,7 @@ final class SmartomatoAggregator
 
                 $payment = (string)($o['payment_source'] ?? 'unknown');
                 $final = (float)($o['final_sum'] ?? 0);
+                $deliveryClient = self::extractClientDeliveryPaid($o);
 
                 $key = implode('|', [$targetDate, $restaurantId, $deliveryType, $channel, $payment]);
                 if (!isset($agg[$key])) {
@@ -123,10 +124,12 @@ final class SmartomatoAggregator
                         'payment_source' => $payment,
                         'order_count' => 0,
                         'sum_final' => 0.0,
+                        'delivery_client_sum' => 0.0,
                     ];
                 }
                 $agg[$key]['order_count']++;
                 $agg[$key]['sum_final'] += $final;
+                $agg[$key]['delivery_client_sum'] += $deliveryClient;
             }
 
             if ($shouldStop) {
@@ -149,13 +152,15 @@ final class SmartomatoAggregator
             $del = $this->db->prepare('DELETE FROM smartomato_daily_stats WHERE stat_date = :d');
             $del->execute(['d' => $targetDate]);
 
-            $ins = $this->db->prepare('INSERT INTO smartomato_daily_stats
-                (stat_date, restaurant_id, delivery_type, channel, payment_source, order_count, sum_final, updated_at)
-                VALUES (:d,:r,:dt,:ch,:ps,:c,:sf,NOW())
-                ON DUPLICATE KEY UPDATE order_count=VALUES(order_count), sum_final=VALUES(sum_final), updated_at=NOW()');
+            $insNew = $this->db->prepare('INSERT INTO smartomato_daily_stats
+                (stat_date, restaurant_id, delivery_type, channel, payment_source, order_count, sum_final, delivery_client_sum, updated_at)
+                VALUES (:d,:r,:dt,:ch,:ps,:c,:sf,:dcs,NOW())
+                ON DUPLICATE KEY UPDATE order_count=VALUES(order_count), sum_final=VALUES(sum_final), delivery_client_sum=VALUES(delivery_client_sum), updated_at=NOW()');
+            $insOld = null;
+            $useNew = true;
 
             foreach ($agg as $row) {
-                $ins->execute([
+                $params = [
                     'd' => $row['date'],
                     'r' => $row['restaurant_id'],
                     'dt' => $row['delivery_type'],
@@ -163,7 +168,21 @@ final class SmartomatoAggregator
                     'ps' => $row['payment_source'],
                     'c' => $row['order_count'],
                     'sf' => $row['sum_final'],
-                ]);
+                ];
+                if ($useNew) {
+                    try {
+                        $insNew->execute($params + ['dcs' => $row['delivery_client_sum']]);
+                        continue;
+                    } catch (Throwable) {
+                        // Backward-compatible mode: DB schema not updated (no delivery_client_sum column).
+                        $useNew = false;
+                    }
+                }
+                $insOld ??= $this->db->prepare('INSERT INTO smartomato_daily_stats
+                    (stat_date, restaurant_id, delivery_type, channel, payment_source, order_count, sum_final, updated_at)
+                    VALUES (:d,:r,:dt,:ch,:ps,:c,:sf,NOW())
+                    ON DUPLICATE KEY UPDATE order_count=VALUES(order_count), sum_final=VALUES(sum_final), updated_at=NOW()');
+                $insOld->execute($params);
             }
 
             $stmt = $this->db->prepare('UPDATE smartomato_runs SET status=:s, message=:m WHERE run_date=:d');
@@ -199,6 +218,45 @@ final class SmartomatoAggregator
             'board' => 'board',
             default => 'other',
         };
+    }
+
+    /**
+     * Smartomato orders may include delivery cost paid by client (field name differs by version).
+     * We try common variants and sum them as "delivery_client_sum".
+     */
+    private static function extractClientDeliveryPaid(array $order): float
+    {
+        $candidates = [
+            'delivery_client_sum',
+            'delivery_price',
+            'delivery_cost',
+            'delivery_fee',
+            'delivery_sum',
+            'shipping_cost',
+            'shipping_price',
+            'shipping_sum',
+        ];
+        foreach ($candidates as $k) {
+            if (array_key_exists($k, $order)) {
+                $v = $order[$k];
+                if (is_numeric($v)) return (float)$v;
+                if (is_string($v)) {
+                    $vv = trim($v);
+                    if ($vv === '') return 0.0;
+                    $vv = str_replace(["\xC2\xA0", ' '], '', $vv);
+                    $vv = str_replace(',', '.', $vv);
+                    if (is_numeric($vv)) return (float)$vv;
+                }
+            }
+        }
+        // Sometimes nested:
+        if (isset($order['delivery']) && is_array($order['delivery'])) {
+            foreach (['price', 'cost', 'fee', 'sum'] as $k) {
+                $v = $order['delivery'][$k] ?? null;
+                if (is_numeric($v)) return (float)$v;
+            }
+        }
+        return 0.0;
     }
 }
 

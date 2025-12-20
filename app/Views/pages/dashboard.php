@@ -217,8 +217,8 @@ foreach ($labels as $d) {
   new Chart(document.getElementById('typesChart'), {
     type: 'line',
     data: { labels, datasets: [
-      {label: 'Delivery', data: delivery},
-      {label: 'Pickup', data: pickup},
+      {label: <?= json_encode($t->t('dashboard.label.delivery', 'Delivery'), JSON_UNESCAPED_UNICODE) ?>, data: delivery},
+      {label: <?= json_encode($t->t('dashboard.label.pickup', 'Pickup'), JSON_UNESCAPED_UNICODE) ?>, data: pickup},
     ]},
     options: {responsive:true, interaction:{mode:'index', intersect:false}}
   });

@@ -76,6 +76,8 @@ CREATE TABLE IF NOT EXISTS smartomato_daily_stats (
   payment_source VARCHAR(50) NOT NULL,
   order_count INT UNSIGNED NOT NULL DEFAULT 0,
   sum_final DECIMAL(14,2) NOT NULL DEFAULT 0,
+  -- Optional: how much client paid for delivery (if Smartomato provides it)
+  delivery_client_sum DECIMAL(14,2) NOT NULL DEFAULT 0,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (stat_date, restaurant_id, delivery_type, channel, payment_source),
   KEY idx_smartomato_stats_date (stat_date),

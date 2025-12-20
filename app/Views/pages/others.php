@@ -17,14 +17,14 @@ $uzNote = $uzum ? (string)$uzum['note'] : '';
 
 <div class="d-flex justify-content-between align-items-center mb-3">
   <div>
-    <h1 class="h4 m-0">Boshqalar</h1>
-    <div class="text-muted small">Kun: <?= htmlspecialchars($date) ?></div>
-    <div class="text-muted small">Bu qiymatlar Smartomato umumiy summasiga qo‘shilmaydi (faqat alohida ko‘rsatish uchun).</div>
+    <h1 class="h4 m-0"><?= htmlspecialchars($t->t('others.title', 'Boshqalar')) ?></h1>
+    <div class="text-muted small"><?= htmlspecialchars($t->t('common.day', 'Kun')) ?>: <?= htmlspecialchars($date) ?></div>
+    <div class="text-muted small"><?= htmlspecialchars($t->t('others.hint', "Bu qiymatlar Smartomato umumiy summasiga qo‘shilmaydi (faqat alohida ko‘rsatish uchun).")) ?></div>
   </div>
   <form class="d-flex gap-2" method="get" action="">
     <input type="hidden" name="page" value="others">
     <input class="form-control form-control-sm" type="date" name="date" value="<?= htmlspecialchars($date) ?>">
-    <button class="btn btn-outline-secondary btn-sm" type="submit">Ko‘rsatish</button>
+    <button class="btn btn-outline-secondary btn-sm" type="submit"><?= htmlspecialchars($t->t('common.show', 'Ko‘rsatish')) ?></button>
   </form>
 </div>
 
@@ -32,26 +32,26 @@ $uzNote = $uzum ? (string)$uzum['note'] : '';
   <div class="col-12 col-lg-6">
     <div class="card">
       <div class="card-body">
-        <h2 class="h6">Telegram bot (qo‘lda)</h2>
+        <h2 class="h6"><?= htmlspecialchars($t->t('others.telegram.title', "Telegram bot (qo‘lda)")) ?></h2>
         <form method="post" action="?page=others&action=save&date=<?= urlencode($date) ?>" class="row g-2">
           <input type="hidden" name="kind" value="telegram">
           <div class="col-6">
-            <label class="form-label">Buyurtma soni</label>
+            <label class="form-label"><?= htmlspecialchars($t->t('common.orders_count', 'Buyurtma soni')) ?></label>
             <input class="form-control" name="order_count" value="<?= htmlspecialchars((string)$tgCount) ?>" required>
           </div>
           <div class="col-6">
-            <label class="form-label">Summa</label>
+            <label class="form-label"><?= htmlspecialchars($t->t('common.sum', 'Summa')) ?></label>
             <input class="form-control" name="sum_final" value="<?= htmlspecialchars((string)$tgSum) ?>" required>
           </div>
           <div class="col-12">
-            <label class="form-label">Izoh</label>
+            <label class="form-label"><?= htmlspecialchars($t->t('common.note', 'Izoh')) ?></label>
             <input class="form-control" name="note" value="<?= htmlspecialchars($tgNote) ?>">
           </div>
           <div class="col-12">
-            <button class="btn btn-success" type="submit">Saqlash</button>
+            <button class="btn btn-success" type="submit"><?= htmlspecialchars($t->t('common.save', 'Saqlash')) ?></button>
           </div>
         </form>
-        <div class="form-text mt-2">Eslatma: “board=qo‘ng‘iroqlar”ni ajratish uchun Dashboardda board dan Telegram qiymati ayriladi.</div>
+        <div class="form-text mt-2"><?= htmlspecialchars($t->t('others.telegram.note', "Eslatma: “board=qo‘ng‘iroqlar”ni ajratish uchun Dashboardda board dan Telegram qiymati ayriladi.")) ?></div>
       </div>
     </div>
   </div>
@@ -59,28 +59,28 @@ $uzNote = $uzum ? (string)$uzum['note'] : '';
   <div class="col-12 col-lg-6">
     <div class="card">
       <div class="card-body">
-        <h2 class="h6">Uzum (qo‘lda)</h2>
+        <h2 class="h6"><?= htmlspecialchars($t->t('others.uzum.title', "Uzum (qo‘lda)")) ?></h2>
         <form method="post" action="?page=others&action=save&date=<?= urlencode($date) ?>" class="row g-2">
           <input type="hidden" name="kind" value="uzum">
           <div class="col-6">
-            <label class="form-label">Buyurtma soni</label>
+            <label class="form-label"><?= htmlspecialchars($t->t('common.orders_count', 'Buyurtma soni')) ?></label>
             <input class="form-control" name="order_count" value="<?= htmlspecialchars((string)$uzCount) ?>" required>
           </div>
           <div class="col-6">
-            <label class="form-label">Summa</label>
+            <label class="form-label"><?= htmlspecialchars($t->t('common.sum', 'Summa')) ?></label>
             <input class="form-control" name="sum_final" value="<?= htmlspecialchars((string)$uzSum) ?>" required>
           </div>
           <div class="col-12">
-            <label class="form-label">Izoh</label>
+            <label class="form-label"><?= htmlspecialchars($t->t('common.note', 'Izoh')) ?></label>
             <input class="form-control" name="note" value="<?= htmlspecialchars($uzNote) ?>">
           </div>
           <div class="col-12">
-            <button class="btn btn-success" type="submit">Saqlash</button>
+            <button class="btn btn-success" type="submit"><?= htmlspecialchars($t->t('common.save', 'Saqlash')) ?></button>
           </div>
         </form>
         <?php if ($uzum === null): ?>
           <div class="form-text mt-2 text-danger">
-            Agar bu form saqlanmasa, demak bazada <code>uzum_daily_stats</code> jadvali yo‘q — schema.sql dan qo‘shing.
+            <?= htmlspecialchars($t->t('others.uzum.missing_table', "Agar bu form saqlanmasa, demak bazada uzum_daily_stats jadvali yo‘q — schema.sql dan qo‘shing.")) ?>
           </div>
         <?php endif; ?>
       </div>

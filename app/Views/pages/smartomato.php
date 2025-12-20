@@ -13,15 +13,13 @@ require __DIR__ . '/../partials/layout_top.php';
 
 <div class="card">
   <div class="card-body">
-    <h1 class="h4">Smartomato</h1>
-    <p class="text-muted">
-      Bu modul har kuni 01:30 (Toshkent vaqti) da “dostavleno” buyurtmalarni yig‘adi va kunlik agregatlarni bazaga yozadi.
-      Keyingi bosqichda bu yerda real statistikalar va filtrlar chiqadi.
-    </p>
+    <h1 class="h4"><?= htmlspecialchars($t->t('smartomato.title', 'Smartomato')) ?></h1>
+    <p class="text-muted"><?= htmlspecialchars($t->t('smartomato.desc', 'Bu modul har kuni 01:30 (Toshkent vaqti) da “dostavleno” buyurtmalarni yig‘adi va kunlik agregatlarni bazaga yozadi.')) ?></p>
 
     <?php if (($auth->role() ?? '') === 'admin' && !$smartomatoConfigured): ?>
       <div class="alert alert-warning mb-3">
-        Smartomato login/parol sozlanmagan. Avval <a href="?page=settings">Sozlamalar</a> ga kiring.
+        <?= htmlspecialchars($t->t('smartomato.not_configured', 'Smartomato login/parol sozlanmagan.')) ?>
+        <a href="?page=settings"><?= htmlspecialchars($t->t('nav.settings', 'Sozlamalar')) ?></a>
       </div>
     <?php endif; ?>
 
@@ -35,36 +33,35 @@ require __DIR__ . '/../partials/layout_top.php';
     <?php if (($auth->role() ?? '') === 'admin'): ?>
       <div class="card bg-light border-0 mb-3">
         <div class="card-body">
-          <h2 class="h6 mb-2">Qo‘lda yig‘ish (test)</h2>
+          <h2 class="h6 mb-2"><?= htmlspecialchars($t->t('smartomato.manual', "Qo‘lda yig‘ish (test)")) ?></h2>
           <form method="post" action="?page=smartomato&action=fetch" class="row g-2 align-items-end">
             <div class="col-12 col-lg-3">
-              <label class="form-label">Sana</label>
+              <label class="form-label"><?= htmlspecialchars($t->t('common.date', 'Sana')) ?></label>
               <input class="form-control" type="date" name="date" value="<?= htmlspecialchars($yesterday) ?>" required>
-              <div class="form-text">Odatda kechagi sana</div>
+              <div class="form-text"><?= htmlspecialchars($t->t('smartomato.usually_yesterday', 'Odatda kechagi sana')) ?></div>
             </div>
             <div class="col-12 col-lg-3">
-              <button class="btn btn-primary w-100" type="submit">Yig‘ish</button>
+              <button class="btn btn-primary w-100" type="submit"><?= htmlspecialchars($t->t('smartomato.fetch', "Yig‘ish")) ?></button>
             </div>
           </form>
-          <div class="form-text mt-2">Bu tugma cron/SSH bo‘lmasa ham ishlaydi (admin only).</div>
+          <div class="form-text mt-2"><?= htmlspecialchars($t->t('smartomato.manual_hint', "Bu tugma cron/SSH bo‘lmasa ham ishlaydi (admin only).")) ?></div>
         </div>
       </div>
 
       <div class="card bg-light border-0 mb-3">
         <div class="card-body">
-          <h2 class="h6 mb-2">Debug: source / payment_source</h2>
+          <h2 class="h6 mb-2"><?= htmlspecialchars($t->t('smartomato.debug', 'Debug: source / payment_source')) ?></h2>
           <form method="post" action="?page=smartomato&action=debug" class="row g-2 align-items-end">
             <div class="col-12 col-lg-3">
-              <label class="form-label">Sana</label>
+              <label class="form-label"><?= htmlspecialchars($t->t('common.date', 'Sana')) ?></label>
               <input class="form-control" type="date" name="date" value="<?= htmlspecialchars($yesterday) ?>" required>
             </div>
             <div class="col-12 col-lg-3">
-              <button class="btn btn-outline-primary w-100" type="submit">Ko‘rish</button>
+              <button class="btn btn-outline-primary w-100" type="submit"><?= htmlspecialchars($t->t('common.show', 'Ko‘rsatish')) ?></button>
             </div>
           </form>
           <div class="form-text mt-2">
-            Bu yerda real qiymatlar chiqadi: qaysi <code>source</code> “wolt/yandex/ios/android/board/web” ekanini aniq ko‘ramiz,
-            va <code>payment_source</code> qanday kelishini tekshiramiz (naqd/karta va boshqalar).
+            <?= htmlspecialchars($t->t('smartomato.debug_hint', "Bu yerda real qiymatlar chiqadi: source va payment_source qanday kelishini tekshiramiz.")) ?>
           </div>
         </div>
       </div>
@@ -77,7 +74,7 @@ require __DIR__ . '/../partials/layout_top.php';
     <div class="col-12">
       <div class="card">
         <div class="card-body">
-          <h2 class="h6 mb-2">Debug natija: <?= htmlspecialchars((string)$debug['date']) ?> (orders_seen=<?= (int)$debug['orders_seen'] ?>)</h2>
+          <h2 class="h6 mb-2"><?= htmlspecialchars($t->t('smartomato.debug_result', 'Debug natija')) ?>: <?= htmlspecialchars((string)$debug['date']) ?> (orders_seen=<?= (int)$debug['orders_seen'] ?>)</h2>
           <div class="row g-3">
             <div class="col-12 col-lg-4">
               <h3 class="h6">Delivery / Pickup</h3>
@@ -115,7 +112,7 @@ require __DIR__ . '/../partials/layout_top.php';
           </div>
 
           <hr>
-          <h3 class="h6">Misollar (5 ta)</h3>
+          <h3 class="h6"><?= htmlspecialchars($t->t('smartomato.examples', 'Misollar (5 ta)')) ?></h3>
           <div class="table-responsive">
             <table class="table table-sm mb-0">
               <thead>
@@ -148,7 +145,7 @@ require __DIR__ . '/../partials/layout_top.php';
           </div>
 
           <hr>
-          <h3 class="h6">Order details (payments array tekshiruvi)</h3>
+          <h3 class="h6"><?= htmlspecialchars($t->t('smartomato.order_details', 'Order details (payments array tekshiruvi)')) ?></h3>
           <div class="table-responsive">
             <table class="table table-sm mb-0">
               <thead><tr><th>ID</th><th>source</th><th>payment_source</th><th>payment_id(detail)</th><th>payments_count</th></tr></thead>
@@ -175,15 +172,15 @@ require __DIR__ . '/../partials/layout_top.php';
   <div class="col-12 col-lg-6">
     <div class="card">
       <div class="card-body">
-        <h2 class="h6">Oxirgi ishga tushirishlar</h2>
+        <h2 class="h6"><?= htmlspecialchars($t->t('smartomato.runs', 'Oxirgi ishga tushirishlar')) ?></h2>
         <div class="table-responsive">
           <table class="table table-sm mb-0">
             <thead>
             <tr>
-              <th>Sana</th>
-              <th>Status</th>
-              <th>Xabar</th>
-              <th>Vaqt</th>
+              <th><?= htmlspecialchars($t->t('common.date', 'Sana')) ?></th>
+              <th><?= htmlspecialchars($t->t('common.status', 'Status')) ?></th>
+              <th><?= htmlspecialchars($t->t('smartomato.message', 'Xabar')) ?></th>
+              <th><?= htmlspecialchars($t->t('smartomato.time', 'Vaqt')) ?></th>
             </tr>
             </thead>
             <tbody>
@@ -196,7 +193,7 @@ require __DIR__ . '/../partials/layout_top.php';
               </tr>
             <?php endforeach; ?>
             <?php if (!$runs): ?>
-              <tr><td colspan="4" class="text-muted">Hozircha run yo‘q (cron ishlamagan yoki qo‘lda bosilmagan).</td></tr>
+              <tr><td colspan="4" class="text-muted"><?= htmlspecialchars($t->t('smartomato.runs_empty', "Hozircha run yo‘q (cron ishlamagan yoki qo‘lda bosilmagan).")) ?></td></tr>
             <?php endif; ?>
             </tbody>
           </table>
@@ -208,15 +205,15 @@ require __DIR__ . '/../partials/layout_top.php';
   <div class="col-12 col-lg-6">
     <div class="card">
       <div class="card-body">
-        <h2 class="h6">Oxirgi statistikalar (kun/restoran)</h2>
+        <h2 class="h6"><?= htmlspecialchars($t->t('smartomato.stats', 'Oxirgi statistikalar (kun/restoran)')) ?></h2>
         <div class="table-responsive">
           <table class="table table-sm mb-0">
             <thead>
             <tr>
-              <th>Sana</th>
-              <th>Restaurant</th>
-              <th class="text-end">Buyurtma</th>
-              <th class="text-end">Summa</th>
+              <th><?= htmlspecialchars($t->t('common.date', 'Sana')) ?></th>
+              <th><?= htmlspecialchars($t->t('common.restaurant', 'Restaurant')) ?></th>
+              <th class="text-end"><?= htmlspecialchars($t->t('common.orders', 'Buyurtma')) ?></th>
+              <th class="text-end"><?= htmlspecialchars($t->t('common.sum', 'Summa')) ?></th>
             </tr>
             </thead>
             <tbody>
@@ -229,7 +226,7 @@ require __DIR__ . '/../partials/layout_top.php';
               </tr>
             <?php endforeach; ?>
             <?php if (!$stats): ?>
-              <tr><td colspan="4" class="text-muted">Hozircha statistika yo‘q.</td></tr>
+              <tr><td colspan="4" class="text-muted"><?= htmlspecialchars($t->t('smartomato.stats_empty', "Hozircha statistika yo‘q.")) ?></td></tr>
             <?php endif; ?>
             </tbody>
           </table>

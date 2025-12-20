@@ -22,7 +22,7 @@ final class SettingsController extends BaseController
         if (($_GET['action'] ?? '') === 'wipe' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $confirm = trim((string)($_POST['confirm_text'] ?? ''));
             if ($confirm !== 'DELETE') {
-                $wipeError = 'Tasdiqlash uchun DELETE deb yozing';
+                $wipeError = $this->i18n->t('settings.wipe.bad_confirm', 'Tasdiqlash uchun DELETE deb yozing');
             } else {
                 try {
                     $this->db->beginTransaction();

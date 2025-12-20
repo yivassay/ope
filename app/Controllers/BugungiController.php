@@ -244,6 +244,22 @@ final class BugungiController extends BaseController
         $stmt->execute($params);
         $byPayment = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+        // Client paid delivery (if Smartomato provides delivery_client_sum column)
+        $clientPaidDelivery = 0.0;
+        try {
+            $q = 'SELECT COALESCE(SUM(delivery_client_sum),0) AS s FROM smartomato_daily_stats WHERE stat_date=:d';
+            $params = ['d' => $date];
+            if ($restaurantId > 0) {
+                $q .= ' AND restaurant_id=:rid';
+                $params['rid'] = $restaurantId;
+            }
+            $stmt = $this->db->prepare($q);
+            $stmt->execute($params);
+            $clientPaidDelivery = (float)($stmt->fetch(PDO::FETCH_ASSOC)['s'] ?? 0);
+        } catch (Throwable) {
+            $clientPaidDelivery = 0.0;
+        }
+
         // Xisobotni yuborish (Telegram)
         $sendMessage = null;
         $sendError = null;
@@ -255,7 +271,7 @@ final class BugungiController extends BaseController
                 $stmt->execute(['d' => $date]);
                 $hasOrders = ((int)($stmt->fetch(PDO::FETCH_ASSOC)['c'] ?? 0)) > 0;
                 if (!$hasOrders) {
-                    throw new \RuntimeException('Smartomato buyurtmalar yuklanmagan');
+                    throw new \RuntimeException($this->i18n->t('bugungi.err.no_orders', 'Smartomato buyurtmalar yuklanmagan'));
                 }
 
                 // 2) Taxi imported for date
@@ -263,7 +279,7 @@ final class BugungiController extends BaseController
                 $stmt->execute(['d' => $date]);
                 $hasTaxi = ((int)($stmt->fetch(PDO::FETCH_ASSOC)['c'] ?? 0)) > 0;
                 if (!$hasTaxi) {
-                    throw new \RuntimeException('Yandex taxi yuklanmagan');
+                    throw new \RuntimeException($this->i18n->t('bugungi.err.no_taxi', 'Yandex taxi yuklanmagan'));
                 }
 
                 // 3) Salaries at least 3 staff
@@ -271,7 +287,7 @@ final class BugungiController extends BaseController
                 $stmt->execute(['d' => $date]);
                 $staffCnt = (int)($stmt->fetch(PDO::FETCH_ASSOC)['c'] ?? 0);
                 if ($staffCnt < 3) {
-                    throw new \RuntimeException('Ishchilar ish haqi kam (kamida 3 ta kiriting)');
+                    throw new \RuntimeException($this->i18n->t('bugungi.err.no_staff', 'Ishchilar ish haqi kam (kamida 3 ta kiriting)'));
                 }
 
                 $botToken = (string)$settings->get('telegram.bot_token', '');
@@ -340,7 +356,7 @@ final class BugungiController extends BaseController
 
                 $text = implode("\n", $lines);
                 (new Telegram($botToken))->sendMessage($chatId, $text);
-                $sendMessage = 'Telegramga yuborildi';
+                $sendMessage = $this->i18n->t('bugungi.sent', 'Telegramga yuborildi');
             } catch (Throwable $e) {
                 $sendError = $e->getMessage();
             }
@@ -366,6 +382,7 @@ final class BugungiController extends BaseController
             'callsCnt' => $callsCnt,
             'callsSum' => $callsSum,
             'byPayment' => $byPayment,
+            'clientPaidDelivery' => $clientPaidDelivery,
             'sendMessage' => $sendMessage,
             'sendError' => $sendError,
         ]);

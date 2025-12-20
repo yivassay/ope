@@ -8,10 +8,10 @@ require __DIR__ . '/../partials/layout_top.php';
 
 <div class="card">
   <div class="card-body">
-    <h1 class="h4 mb-3">Profil</h1>
+    <h1 class="h4 mb-3"><?= htmlspecialchars($t->t('profile.title', 'Profil')) ?></h1>
 
     <?php if ($saved): ?>
-      <div class="alert alert-success">Parol yangilandi</div>
+      <div class="alert alert-success"><?= htmlspecialchars($t->t('profile.saved', 'Parol yangilandi')) ?></div>
     <?php endif; ?>
     <?php if ($error): ?>
       <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
@@ -19,19 +19,19 @@ require __DIR__ . '/../partials/layout_top.php';
 
     <form method="post" action="?page=profile" class="row g-3">
       <div class="col-12 col-lg-4">
-        <label class="form-label">Joriy parol</label>
+        <label class="form-label"><?= htmlspecialchars($t->t('profile.current_password', 'Joriy parol')) ?></label>
         <input class="form-control" type="password" name="current_password" required>
       </div>
       <div class="col-12 col-lg-4">
-        <label class="form-label">Yangi parol</label>
+        <label class="form-label"><?= htmlspecialchars($t->t('profile.new_password', 'Yangi parol')) ?></label>
         <input class="form-control" type="password" name="new_password" required>
       </div>
       <div class="col-12 col-lg-4">
-        <label class="form-label">Yangi parol (qayta)</label>
+        <label class="form-label"><?= htmlspecialchars($t->t('profile.new_password2', 'Yangi parol (qayta)')) ?></label>
         <input class="form-control" type="password" name="new_password2" required>
       </div>
       <div class="col-12">
-        <button class="btn btn-primary" type="submit">Saqlash</button>
+        <button class="btn btn-primary" type="submit"><?= htmlspecialchars($t->t('common.save', 'Saqlash')) ?></button>
       </div>
     </form>
   </div>
