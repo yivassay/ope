@@ -17,9 +17,16 @@ final class OperatorsController extends BaseController
             $this->auth->requireRole('admin');
             $id = (int)($_POST['id'] ?? 0);
             $name = trim((string)($_POST['name'] ?? ''));
-            $fixed = (float)($_POST['fixed_salary'] ?? 0);
-            $fixedDay = (float)($_POST['fixed_salary_day'] ?? $fixed);
-            $fixedNight = (float)($_POST['fixed_salary_night'] ?? $fixed);
+            // In UI we use day/night fixed. Keep fixed_salary as legacy fallback.
+            $fixedDay = (float)($_POST['fixed_salary_day'] ?? 0);
+            $fixedNight = (float)($_POST['fixed_salary_night'] ?? 0);
+            $fixedLegacy = (float)($_POST['fixed_salary'] ?? 0);
+            $fixed = $fixedLegacy;
+            if ($fixed <= 0) {
+                $fixed = ($fixedDay > 0) ? $fixedDay : (($fixedNight > 0) ? $fixedNight : 0.0);
+            }
+            if ($fixedDay <= 0) $fixedDay = $fixed;
+            if ($fixedNight <= 0) $fixedNight = $fixed;
             $pct = (float)($_POST['percent_rate'] ?? 0);
             $guaranteed = (float)($_POST['guaranteed_salary'] ?? 0);
             $isActive = isset($_POST['is_active']) ? 1 : 0;
