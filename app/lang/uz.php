@@ -89,6 +89,7 @@ return [
     'bugungi.section.staff' => '🙂Ishchilar',
     'bugungi.profit.total_orders' => 'Jami buyurtma',
     'bugungi.profit.total_sum' => 'Jami summa',
+    'bugungi.profit.net_profit' => 'Chistaya foyda',
     'bugungi.profit.delivery_no_agg' => 'Delivery (no agg)',
     'bugungi.profit.pickup_no_agg' => 'Pickup (no agg)',
     'bugungi.profit.aggregators' => 'Agregatorlar',

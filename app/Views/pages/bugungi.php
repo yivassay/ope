@@ -39,12 +39,35 @@ $paymentLabel = static function (string $ps) use ($t): string {
 ?>
 
 <?php
-$profitTotal = (float)($total['sum_final'] ?? 0) + (float)($uzum['sum_final'] ?? 0);
+$y = $agg['yandex'] ?? ['cnt'=>0,'sum_final'=>0];
+$w = $agg['wolt'] ?? ['cnt'=>0,'sum_final'=>0];
+$u = $uzum ?? ['cnt'=>0,'sum_final'=>0];
+$ySum = (float)($y['sum_final'] ?? 0);
+$wSum = (float)($w['sum_final'] ?? 0);
+$uSum = (float)($u['sum_final'] ?? 0);
+$yNet = $ySum * (1 - ((float)$commission['yandex']/100));
+$wNet = $wSum * (1 - ((float)$commission['wolt']/100));
+$uNet = $uSum * (1 - ((float)$commission['uzum']/100));
+
+// Profit total should use aggregator net (commission removed)
+$nonAggSum = (float)($total['sum_final'] ?? 0) - $ySum - $wSum;
+$profitTotal = max(0.0, $nonAggSum + $yNet + $wNet + $uNet);
+
 $pct = static function (float $v) use ($profitTotal): string {
     if ($profitTotal <= 0) return '0%';
     return number_format(($v / $profitTotal) * 100.0, 1, '.', '') . '%';
 };
-$expensesTotal = (float)$salarySum + (float)($taxi['sum_total'] ?? 0) + (float)$millSum + (float)($err['sum'] ?? 0);
+
+// Expenses total: salaries + taxi + errors - client paid delivery
+$expensesTotal = (float)$salarySum
+    + (float)($taxi['sum_total'] ?? 0)
+    + (float)$millSum
+    + (float)($err['sum'] ?? 0)
+    - (float)$clientPaidDelivery;
+
+$netProfit = $profitTotal - $expensesTotal;
+
+$totalOrdersAll = (float)($total['cnt'] ?? 0) + (float)($uzum['cnt'] ?? 0);
 $taxiGross = (float)($taxi['sum_total'] ?? 0) + (float)$millSum;
 $taxiDiff = $taxiGross - (float)$clientPaidDelivery;
 ?>
@@ -93,7 +116,7 @@ $taxiDiff = $taxiGross - (float)$clientPaidDelivery;
   <div class="col-6 col-lg-3">
     <div class="card"><div class="card-body py-3">
       <div class="text-muted small"><?= htmlspecialchars($t->t('bugungi.profit.total_orders', 'Jami buyurtma')) ?></div>
-      <div class="fs-5 fw-semibold"><?= num0($total['cnt'] ?? 0) ?></div>
+      <div class="fs-5 fw-semibold"><?= num0($totalOrdersAll) ?></div>
     </div></div>
   </div>
   <div class="col-6 col-lg-3">
@@ -101,6 +124,14 @@ $taxiDiff = $taxiGross - (float)$clientPaidDelivery;
       <div class="text-muted small"><?= htmlspecialchars($t->t('bugungi.profit.total_sum', 'Jami summa')) ?></div>
       <div class="fs-5 fw-semibold"><?= money($profitTotal) ?></div>
       <div class="text-muted small"><?= $pct($profitTotal) ?></div>
+    </div></div>
+  </div>
+
+  <div class="col-6 col-lg-3">
+    <div class="card"><div class="card-body py-3">
+      <div class="text-muted small"><?= htmlspecialchars($t->t('bugungi.profit.net_profit', 'Chistaya foyda')) ?></div>
+      <div class="fs-5 fw-semibold"><?= money($netProfit) ?></div>
+      <div class="text-muted small"><?= $pct($netProfit) ?></div>
     </div></div>
   </div>
   <div class="col-6 col-lg-3">
@@ -122,14 +153,6 @@ $taxiDiff = $taxiGross - (float)$clientPaidDelivery;
     <div class="card">
       <div class="card-body">
         <h3 class="h6 mb-2"><?= htmlspecialchars($t->t('bugungi.profit.aggregators', 'Agregatorlar')) ?></h3>
-        <?php
-          $y = $agg['yandex'] ?? ['cnt'=>0,'sum_final'=>0];
-          $w = $agg['wolt'] ?? ['cnt'=>0,'sum_final'=>0];
-          $u = $uzum ?? ['cnt'=>0,'sum_final'=>0];
-          $yNet = (float)$y['sum_final'] * (1 - ((float)$commission['yandex']/100));
-          $wNet = (float)$w['sum_final'] * (1 - ((float)$commission['wolt']/100));
-          $uNet = (float)$u['sum_final'] * (1 - ((float)$commission['uzum']/100));
-        ?>
         <div class="table-responsive">
           <table class="table table-sm mb-0">
             <thead><tr><th><?= htmlspecialchars($t->t('common.channel', 'Kanal')) ?></th><th class="text-end"><?= htmlspecialchars($t->t('common.count', 'Cnt')) ?></th><th class="text-end"><?= htmlspecialchars($t->t('common.sum', 'Summa')) ?></th><th class="text-end"><?= htmlspecialchars($t->t('common.commission', 'Komissiya')) ?></th><th class="text-end"><?= htmlspecialchars($t->t('common.net', 'Net')) ?></th></tr></thead>

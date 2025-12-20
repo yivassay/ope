@@ -89,6 +89,7 @@ return [
     'bugungi.section.staff' => '🙂Сотрудники',
     'bugungi.profit.total_orders' => 'Всего заказов',
     'bugungi.profit.total_sum' => 'Общая сумма',
+    'bugungi.profit.net_profit' => 'Чистая прибыль',
     'bugungi.profit.delivery_no_agg' => 'Доставка (без агрегаторов)',
     'bugungi.profit.pickup_no_agg' => 'Самовывоз (без агрегаторов)',
     'bugungi.profit.aggregators' => 'Агрегаторы',

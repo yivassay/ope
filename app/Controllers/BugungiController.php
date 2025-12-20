@@ -296,17 +296,23 @@ final class BugungiController extends BaseController
                 $botToken = (string)$settings->get('telegram.bot_token', '');
                 $chatId = (string)$settings->get('telegram.chat_id', '');
 
-                $profitTotal = (float)($total['sum_final'] ?? 0) + (float)($uzum['sum_final'] ?? 0);
-                $profitTotal = max(0.0, $profitTotal);
-
+                // Profit: aggregator sums should be net (commission removed)
                 $ySum = (float)($y['sum_final'] ?? 0);
                 $wSum = (float)($w['sum_final'] ?? 0);
                 $uSum = (float)($u['sum_final'] ?? 0);
-                $yNet = $ySum * (1 - ((float)$commission['yandex']/100));
-                $wNet = $wSum * (1 - ((float)$commission['wolt']/100));
-                $uNet = $uSum * (1 - ((float)$commission['uzum']/100));
+                $yNet = $ySum * (1 - ((float)$commission['yandex'] / 100));
+                $wNet = $wSum * (1 - ((float)$commission['wolt'] / 100));
+                $uNet = $uSum * (1 - ((float)$commission['uzum'] / 100));
 
-                $expensesTotal = (float)$salarySum + (float)($taxi['sum_total'] ?? 0) + (float)$millSum + (float)($err['sum'] ?? 0);
+                $nonAggSum = (float)($total['sum_final'] ?? 0) - $ySum - $wSum;
+                $profitTotal = max(0.0, $nonAggSum + $yNet + $wNet + $uNet);
+
+                // Expenses: subtract what client paid for delivery
+                $expensesTotal = (float)$salarySum
+                    + (float)($taxi['sum_total'] ?? 0)
+                    + (float)$millSum
+                    + (float)($err['sum'] ?? 0)
+                    - (float)$clientPaidDelivery;
 
                 $pct = static function (float $v) use ($profitTotal): string {
                     if ($profitTotal <= 0) return '0%';
