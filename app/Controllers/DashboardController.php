@@ -225,11 +225,11 @@ final class DashboardController extends BaseController
             $typesByDate[$d][(string)$r['delivery_type']] = (float)$r['cnt'];
         }
 
-        // Operator dynamics (top 5 by order_count)
+        // Operator dynamics (top 5 by sales_sum)
         $topOps = [];
-        $opSeries = []; // opId => [date => count]
+        $opSeries = []; // opId => [date => sales_sum]
         $stmt = $this->db->prepare('
-            SELECT operator_id, COALESCE(SUM(order_count),0) AS cnt
+            SELECT operator_id, COALESCE(SUM(sales_sum),0) AS cnt
             FROM operator_daily_sales
             WHERE sale_date BETWEEN :s AND :e
             GROUP BY operator_id
@@ -247,7 +247,7 @@ final class DashboardController extends BaseController
             foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
                 $opNames[(int)$r['id']] = (string)$r['name'];
             }
-            $stmt = $this->db->prepare("SELECT sale_date, operator_id, COALESCE(order_count,0) AS cnt FROM operator_daily_sales WHERE sale_date BETWEEN ? AND ? AND operator_id IN ($in)");
+            $stmt = $this->db->prepare("SELECT sale_date, operator_id, COALESCE(sales_sum,0) AS cnt FROM operator_daily_sales WHERE sale_date BETWEEN ? AND ? AND operator_id IN ($in)");
             $stmt->execute(array_merge([$from, $to], $opIds));
             foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
                 $oid = (int)$r['operator_id'];

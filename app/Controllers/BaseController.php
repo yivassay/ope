@@ -14,7 +14,11 @@ abstract class BaseController
 
     public function __construct(protected PDO $db, protected Auth $auth)
     {
-        $this->i18n = new I18n('uz');
+        $locale = $_SESSION['locale'] ?? 'uz';
+        if (!in_array($locale, ['uz', 'ru'], true)) {
+            $locale = 'uz';
+        }
+        $this->i18n = new I18n($locale);
     }
 
     protected function render(string $template, array $data = []): void

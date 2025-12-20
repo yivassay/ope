@@ -3,7 +3,7 @@
 /** @var string|null $error */
 ?>
 <!doctype html>
-<html lang="uz">
+<html lang="<?= htmlspecialchars($_SESSION['locale'] ?? 'uz') ?>">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">

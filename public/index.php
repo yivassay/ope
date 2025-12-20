@@ -10,6 +10,20 @@ $auth = new Auth($db);
 
 $page = $_GET['page'] ?? 'dashboard';
 
+// Language switch (works for all pages)
+if (isset($_GET['lang'])) {
+    $lang = (string)$_GET['lang'];
+    if (in_array($lang, ['uz', 'ru'], true)) {
+        $_SESSION['locale'] = $lang;
+    }
+    // redirect back without lang param
+    $params = $_GET;
+    unset($params['lang']);
+    $qs = http_build_query($params);
+    Response::redirect($qs ? ('?' . $qs) : '?page=dashboard');
+    exit;
+}
+
 // Public pages
 if ($page === 'login') {
     (new \App\Controllers\AuthController($db, $auth))->login();

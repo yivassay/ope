@@ -70,23 +70,23 @@ foreach ($labels as $d) {
 
 <div class="d-flex justify-content-between align-items-end mb-3">
   <div>
-    <h1 class="h4 mb-1">Analitika</h1>
+    <h1 class="h4 mb-1"><?= htmlspecialchars($t->t('dashboard.title', 'Analitika')) ?></h1>
     <div class="text-muted small"><?= htmlspecialchars($from) ?> → <?= htmlspecialchars($to) ?></div>
   </div>
   <form class="d-flex gap-2" method="get" action="">
     <input type="hidden" name="page" value="dashboard">
     <select class="form-select form-select-sm" name="period">
-      <option value="week" <?= $period==='week'?'selected':'' ?>>Hafta</option>
-      <option value="month" <?= $period==='month'?'selected':'' ?>>Oy</option>
-      <option value="year" <?= $period==='year'?'selected':'' ?>>Yil</option>
+      <option value="week" <?= $period==='week'?'selected':'' ?>><?= htmlspecialchars($t->t('common.period.week', 'Hafta')) ?></option>
+      <option value="month" <?= $period==='month'?'selected':'' ?>><?= htmlspecialchars($t->t('common.period.month', 'Oy')) ?></option>
+      <option value="year" <?= $period==='year'?'selected':'' ?>><?= htmlspecialchars($t->t('common.period.year', 'Yil')) ?></option>
     </select>
     <select class="form-select form-select-sm" name="restaurant_id">
-      <option value="0">Barcha restoran</option>
+      <option value="0"><?= htmlspecialchars($t->t('common.all_restaurants', 'Barcha restoran')) ?></option>
       <?php foreach ($restaurants as $id => $name): ?>
         <option value="<?= (int)$id ?>" <?= ((int)$restaurantId === (int)$id) ? 'selected' : '' ?>><?= htmlspecialchars($name) ?></option>
       <?php endforeach; ?>
     </select>
-    <button class="btn btn-primary btn-sm" type="submit">Ko‘rsatish</button>
+    <button class="btn btn-primary btn-sm" type="submit"><?= htmlspecialchars($t->t('common.show', 'Ko‘rsatish')) ?></button>
   </form>
 </div>
 
@@ -94,7 +94,7 @@ foreach ($labels as $d) {
   <div class="col-12">
     <div class="card">
       <div class="card-body">
-        <h2 class="h6 mb-2">1) Dinamika: buyurtmalar</h2>
+        <h2 class="h6 mb-2"><?= htmlspecialchars($t->t('dashboard.chart.orders', '1) Dinamika: buyurtmalar')) ?></h2>
         <canvas id="ordersChart" height="120"></canvas>
       </div>
     </div>
@@ -103,7 +103,7 @@ foreach ($labels as $d) {
   <div class="col-12">
     <div class="card">
       <div class="card-body">
-        <h2 class="h6 mb-2">2) Dinamika: xarajatlar</h2>
+        <h2 class="h6 mb-2"><?= htmlspecialchars($t->t('dashboard.chart.expenses', '2) Dinamika: xarajatlar')) ?></h2>
         <canvas id="expensesChart" height="120"></canvas>
       </div>
     </div>
@@ -112,7 +112,7 @@ foreach ($labels as $d) {
   <div class="col-12">
     <div class="card">
       <div class="card-body">
-        <h2 class="h6 mb-2">3) Dinamika: agregatorlar (Yandex / Wolt / Uzum)</h2>
+        <h2 class="h6 mb-2"><?= htmlspecialchars($t->t('dashboard.chart.aggregators', '3) Dinamika: agregatorlar (Yandex / Wolt / Uzum)')) ?></h2>
         <canvas id="aggregatorsChart" height="110"></canvas>
       </div>
     </div>
@@ -121,7 +121,7 @@ foreach ($labels as $d) {
   <div class="col-12">
     <div class="card">
       <div class="card-body">
-        <h2 class="h6 mb-2">4) Dinamika: boshqa kanallar (Web+App / Telegram / Qo'ng'iroqlar)</h2>
+        <h2 class="h6 mb-2"><?= htmlspecialchars($t->t('dashboard.chart.channels', "4) Dinamika: boshqa kanallar (Web+App / Telegram / Qo'ng'iroqlar)")) ?></h2>
         <canvas id="channelsChart" height="110"></canvas>
       </div>
     </div>
@@ -130,7 +130,7 @@ foreach ($labels as $d) {
   <div class="col-12">
     <div class="card">
       <div class="card-body">
-        <h2 class="h6 mb-2">5) Dinamika: buyurtma turi (Delivery / Pickup) — Web+App+Board</h2>
+        <h2 class="h6 mb-2"><?= htmlspecialchars($t->t('dashboard.chart.types', '5) Dinamika: buyurtma turi (Delivery / Pickup) — Web+App+Board')) ?></h2>
         <canvas id="typesChart" height="110"></canvas>
       </div>
     </div>
@@ -139,7 +139,7 @@ foreach ($labels as $d) {
   <div class="col-12">
     <div class="card">
       <div class="card-body">
-        <h2 class="h6 mb-2">6) Dinamika: operatorlar (top 5)</h2>
+        <h2 class="h6 mb-2"><?= htmlspecialchars($t->t('dashboard.chart.operators', '6) Dinamika: operatorlar (top 5) — savdo summasi')) ?></h2>
         <canvas id="operatorsChart" height="140"></canvas>
       </div>
     </div>
@@ -157,9 +157,9 @@ foreach ($labels as $d) {
     data: {
       labels,
       datasets: [
-        {label: 'Buyurtmalar', data: orders, yAxisID: 'y'},
-        {label: 'Vyручka', data: revenue, yAxisID: 'y1'},
-        {label: 'O‘rtacha чек', data: avg, yAxisID: 'y2'},
+        {label: <?= json_encode($t->t('dashboard.label.orders', 'Buyurtmalar'), JSON_UNESCAPED_UNICODE) ?>, data: orders, yAxisID: 'y'},
+        {label: <?= json_encode($t->t('dashboard.label.revenue', 'Vyручka'), JSON_UNESCAPED_UNICODE) ?>, data: revenue, yAxisID: 'y1'},
+        {label: <?= json_encode($t->t('dashboard.label.avg', 'O‘rtacha чек'), JSON_UNESCAPED_UNICODE) ?>, data: avg, yAxisID: 'y2'},
       ]
     },
     options: {
@@ -179,9 +179,9 @@ foreach ($labels as $d) {
   new Chart(document.getElementById('expensesChart'), {
     type: 'line',
     data: { labels, datasets: [
-      {label: 'Ish haqi', data: salary},
-      {label: 'Taxi', data: taxi},
-      {label: 'Xatolar', data: errors},
+      {label: <?= json_encode($t->t('dashboard.label.salary', 'Ish haqi'), JSON_UNESCAPED_UNICODE) ?>, data: salary},
+      {label: <?= json_encode($t->t('dashboard.label.taxi', 'Taxi'), JSON_UNESCAPED_UNICODE) ?>, data: taxi},
+      {label: <?= json_encode($t->t('dashboard.label.errors', 'Xatolar'), JSON_UNESCAPED_UNICODE) ?>, data: errors},
     ]},
     options: {responsive:true, interaction:{mode:'index', intersect:false}}
   });
@@ -205,9 +205,9 @@ foreach ($labels as $d) {
   new Chart(document.getElementById('channelsChart'), {
     type: 'line',
     data: { labels, datasets: [
-      {label: 'Web+App', data: webapp},
-      {label: 'Telegram', data: telegram},
-      {label: "Qo'ng'iroqlar", data: calls},
+      {label: <?= json_encode($t->t('dashboard.label.webapp', 'Web+App'), JSON_UNESCAPED_UNICODE) ?>, data: webapp},
+      {label: <?= json_encode($t->t('dashboard.label.telegram', 'Telegram'), JSON_UNESCAPED_UNICODE) ?>, data: telegram},
+      {label: <?= json_encode($t->t('dashboard.label.calls', "Qo'ng'iroqlar"), JSON_UNESCAPED_UNICODE) ?>, data: calls},
     ]},
     options: {responsive:true, interaction:{mode:'index', intersect:false}}
   });

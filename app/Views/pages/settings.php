@@ -10,13 +10,13 @@ require __DIR__ . '/../partials/layout_top.php';
 
 <div class="card">
   <div class="card-body">
-    <h1 class="h4 mb-3">Sozlamalar</h1>
+    <h1 class="h4 mb-3"><?= htmlspecialchars($t->t('settings.title', 'Sozlamalar')) ?></h1>
 
     <?php if ($saved): ?>
-      <div class="alert alert-success">Saqlandi</div>
+      <div class="alert alert-success"><?= htmlspecialchars($t->t('settings.saved', 'Saqlandi')) ?></div>
     <?php endif; ?>
     <?php if ($wiped): ?>
-      <div class="alert alert-success">Baza tozalandi (analitika ma’lumotlari)</div>
+      <div class="alert alert-success"><?= htmlspecialchars($t->t('settings.wiped', 'Baza tozalandi (analitika ma’lumotlari)')) ?></div>
     <?php endif; ?>
     <?php if ($wipeError): ?>
       <div class="alert alert-danger"><?= htmlspecialchars($wipeError) ?></div>
@@ -102,25 +102,25 @@ require __DIR__ . '/../partials/layout_top.php';
       </div>
 
       <div class="mt-3">
-        <button class="btn btn-primary" type="submit">Saqlash</button>
+        <button class="btn btn-primary" type="submit"><?= htmlspecialchars($t->t('common.save', 'Saqlash')) ?></button>
       </div>
     </form>
 
     <hr class="my-4">
-    <h2 class="h6 text-danger">Xavfli amal: Bazani tozalash</h2>
+    <h2 class="h6 text-danger"><?= htmlspecialchars($t->t('settings.danger', 'Xavfli amal: Bazani tozalash')) ?></h2>
     <p class="text-muted small mb-2">
       Bu tugma barcha analitika ma’lumotlarini o‘chiradi (Smartomato, Operator savdo, Boshqalar, Taxi).
       <strong>Foydalanuvchilar va Sozlamalar</strong> o‘chirilmaydi.
     </p>
     <form method="post" action="?page=settings&action=wipe" class="row g-2 align-items-end">
       <div class="col-12 col-lg-4">
-        <label class="form-label">Tasdiqlash</label>
+        <label class="form-label"><?= htmlspecialchars($t->t('settings.confirm', 'Tasdiqlash')) ?></label>
         <input class="form-control" name="confirm_text" placeholder="DELETE" required>
         <div class="form-text">Davom etish uchun aniq <code>DELETE</code> deb yozing.</div>
       </div>
       <div class="col-12 col-lg-3">
         <button class="btn btn-danger w-100" type="submit" onclick="return confirm('Haqiqatan ham barcha analitika ma\\'lumotlarini o\\'chirmoqchimisiz?');">
-          Bazani tozalash
+          <?= htmlspecialchars($t->t('settings.wipe_btn', 'Bazani tozalash')) ?>
         </button>
       </div>
     </form>

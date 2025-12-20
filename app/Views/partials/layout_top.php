@@ -1,9 +1,11 @@
 <?php
 /** @var \App\Auth $auth */
 /** @var \App\I18n $t */
+$locale = $_SESSION['locale'] ?? 'uz';
+if (!in_array($locale, ['uz', 'ru'], true)) $locale = 'uz';
 ?>
 <!doctype html>
-<html lang="uz">
+<html lang="<?= htmlspecialchars($locale) ?>">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -30,7 +32,16 @@
         <?php endif; ?>
       </ul>
       <div class="d-flex">
-        <a class="btn btn-outline-light btn-sm me-2" href="?page=profile">Profil</a>
+        <div class="dropdown me-2">
+          <button class="btn btn-outline-light btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <?= htmlspecialchars(strtoupper($locale)) ?>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <li><a class="dropdown-item" href="?<?= htmlspecialchars(http_build_query(array_merge($_GET, ['lang' => 'uz']))) ?>"><?= htmlspecialchars($t->t('lang.uz', 'O‘zbekcha')) ?></a></li>
+            <li><a class="dropdown-item" href="?<?= htmlspecialchars(http_build_query(array_merge($_GET, ['lang' => 'ru']))) ?>"><?= htmlspecialchars($t->t('lang.ru', 'Русский')) ?></a></li>
+          </ul>
+        </div>
+        <a class="btn btn-outline-light btn-sm me-2" href="?page=profile"><?= htmlspecialchars($t->t('nav.profile', 'Profil')) ?></a>
         <a class="btn btn-outline-light btn-sm" href="?page=logout"><?= htmlspecialchars($t->t('nav.logout')) ?></a>
       </div>
     </div>
