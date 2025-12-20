@@ -244,8 +244,9 @@ final class BugungiController extends BaseController
         $stmt->execute($params);
         $byPayment = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // Client paid delivery (if Smartomato provides delivery_client_sum column)
+        // Client paid delivery (if DB has delivery_client_sum column and Smartomato import fills it)
         $clientPaidDelivery = 0.0;
+        $clientPaidDeliverySupported = true;
         try {
             $q = 'SELECT COALESCE(SUM(delivery_client_sum),0) AS s FROM smartomato_daily_stats WHERE stat_date=:d';
             $params = ['d' => $date];
@@ -256,7 +257,9 @@ final class BugungiController extends BaseController
             $stmt = $this->db->prepare($q);
             $stmt->execute($params);
             $clientPaidDelivery = (float)($stmt->fetch(PDO::FETCH_ASSOC)['s'] ?? 0);
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            // Most common: DB schema not updated => Unknown column delivery_client_sum
+            $clientPaidDeliverySupported = false;
             $clientPaidDelivery = 0.0;
         }
 
@@ -383,6 +386,7 @@ final class BugungiController extends BaseController
             'callsSum' => $callsSum,
             'byPayment' => $byPayment,
             'clientPaidDelivery' => $clientPaidDelivery,
+            'clientPaidDeliverySupported' => $clientPaidDeliverySupported,
             'sendMessage' => $sendMessage,
             'sendError' => $sendError,
         ]);

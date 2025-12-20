@@ -237,7 +237,7 @@ foreach ($millennium as $m) {
         <hr>
         <div class="table-responsive">
           <table class="table table-sm mb-0">
-            <thead><tr><th><?= htmlspecialchars($t->t('common.restaurant', 'Restaurant')) ?></th><th class="text-end">Cnt</th><th class="text-end"><?= htmlspecialchars($t->t('common.sum', 'Summa')) ?></th><th><?= htmlspecialchars($t->t('common.note', 'Izoh')) ?></th></tr></thead>
+            <thead><tr><th><?= htmlspecialchars($t->t('common.restaurant', 'Restaurant')) ?></th><th class="text-end"><?= htmlspecialchars($t->t('common.count', 'Cnt')) ?></th><th class="text-end"><?= htmlspecialchars($t->t('common.sum', 'Summa')) ?></th><th><?= htmlspecialchars($t->t('common.note', 'Izoh')) ?></th></tr></thead>
             <tbody>
             <?php foreach ($millennium as $m): ?>
               <tr>
@@ -264,7 +264,7 @@ foreach ($millennium as $m) {
           <h2 class="h6 mb-2"><?= htmlspecialchars($t->t('taxi.duplicate_by_restaurant', 'Ikki marta jonatilgan (restaurant)')) ?></h2>
           <div class="table-responsive">
             <table class="table table-sm mb-0">
-              <thead><tr><th><?= htmlspecialchars($t->t('common.restaurant', 'Restaurant')) ?></th><th class="text-end">Cnt</th><th class="text-end"><?= htmlspecialchars($t->t('common.sum', 'Summa')) ?></th></tr></thead>
+              <thead><tr><th><?= htmlspecialchars($t->t('common.restaurant', 'Restaurant')) ?></th><th class="text-end"><?= htmlspecialchars($t->t('common.count', 'Cnt')) ?></th><th class="text-end"><?= htmlspecialchars($t->t('common.sum', 'Summa')) ?></th></tr></thead>
               <tbody>
               <?php foreach ($dupByRestaurant as $r): ?>
                 <tr>

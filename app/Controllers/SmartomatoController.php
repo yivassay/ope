@@ -62,6 +62,8 @@ final class SmartomatoController extends BaseController
                 $examples = [];
                 $ordersSeen = 0;
 
+                $deliveryKeyCounts = [];
+
                 while ($page <= $pageCount) {
                     $resp = $client->listOrders($token, [
                         'page' => $page,
@@ -110,6 +112,10 @@ final class SmartomatoController extends BaseController
                         $takeaway[$isTakeaway ? 'pickup' : 'delivery']++;
 
                         if (count($examples) < 5) {
+                            $deliveryLike = $this->extractDeliveryLikeFields($o);
+                            foreach (array_keys($deliveryLike) as $k) {
+                                $deliveryKeyCounts[$k] = ($deliveryKeyCounts[$k] ?? 0) + 1;
+                            }
                             $examples[] = [
                                 'id' => (int)($o['id'] ?? 0),
                                 'created_at' => $createdAt,
@@ -119,6 +125,7 @@ final class SmartomatoController extends BaseController
                                 'payment_source' => $ps,
                                 'final_sum' => (float)($o['final_sum'] ?? 0),
                                 'payment_id' => $o['payment_id'] ?? null,
+                                'delivery_like' => $deliveryLike,
                             ];
                         }
                     }
@@ -135,6 +142,7 @@ final class SmartomatoController extends BaseController
                     if (($ex['id'] ?? 0) <= 0) continue;
                     $full = $client->getOrder($token, (int)$ex['id']);
                     $order = $full['order'] ?? [];
+                    $deliveryLike = is_array($order) ? $this->extractDeliveryLikeFields($order) : [];
                     $details[] = [
                         'id' => (int)$ex['id'],
                         'source' => $ex['source'],
@@ -142,6 +150,7 @@ final class SmartomatoController extends BaseController
                         'payment_id' => $order['payment_id'] ?? null,
                         'payments_count' => is_array($full['payments'] ?? null) ? count($full['payments']) : null,
                         'payments' => $full['payments'] ?? null,
+                        'delivery_like' => $deliveryLike,
                     ];
                 }
 
@@ -156,6 +165,7 @@ final class SmartomatoController extends BaseController
                     'takeaway' => $takeaway,
                     'examples' => $examples,
                     'details' => $details,
+                    'delivery_keys_top' => $deliveryKeyCounts,
                 ];
             } catch (Throwable $e) {
                 $error = $e->getMessage();
@@ -182,6 +192,23 @@ final class SmartomatoController extends BaseController
             'runs' => $runs,
             'stats' => $stats,
         ]);
+    }
+
+    private function extractDeliveryLikeFields(array $order): array
+    {
+        $out = [];
+        foreach ($order as $k => $v) {
+            if (!is_string($k)) continue;
+            $lk = strtolower($k);
+            if (strpos($lk, 'delivery') === false && strpos($lk, 'shipping') === false) {
+                continue;
+            }
+            if (is_scalar($v) || $v === null) {
+                $out[$k] = $v;
+            }
+            if (count($out) >= 12) break;
+        }
+        return $out;
     }
 }
 

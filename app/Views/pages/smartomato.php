@@ -84,6 +84,26 @@ require __DIR__ . '/../partials/layout_top.php';
               </ul>
             </div>
             <div class="col-12 col-lg-4">
+              <h3 class="h6">delivery/shipping keys (examples)</h3>
+              <?php
+                $dk = $debug['delivery_keys_top'] ?? [];
+                if (is_array($dk)) arsort($dk);
+              ?>
+              <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                  <thead><tr><th>key</th><th class="text-end">cnt</th></tr></thead>
+                  <tbody>
+                  <?php foreach (array_slice($dk, 0, 12, true) as $k => $v): ?>
+                    <tr><td><code><?= htmlspecialchars((string)$k) ?></code></td><td class="text-end"><?= (int)$v ?></td></tr>
+                  <?php endforeach; ?>
+                  <?php if (!$dk): ?>
+                    <tr><td colspan="2" class="text-muted">no delivery/shipping keys in listOrders examples</td></tr>
+                  <?php endif; ?>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div class="col-12 col-lg-4">
               <h3 class="h6">source (top)</h3>
               <div class="table-responsive">
                 <table class="table table-sm mb-0">
@@ -124,6 +144,7 @@ require __DIR__ . '/../partials/layout_top.php';
                 <th>source</th>
                 <th>payment_source</th>
                 <th class="text-end">final_sum</th>
+                <th>delivery_like(list)</th>
                 <th>payment_id(list)</th>
               </tr>
               </thead>
@@ -137,6 +158,7 @@ require __DIR__ . '/../partials/layout_top.php';
                   <td><code><?= htmlspecialchars((string)$ex['source']) ?></code></td>
                   <td><code><?= htmlspecialchars((string)$ex['payment_source']) ?></code></td>
                   <td class="text-end"><?= number_format((float)$ex['final_sum'], 2, '.', ' ') ?></td>
+                  <td class="text-muted small"><code><?= htmlspecialchars(json_encode($ex['delivery_like'] ?? [], JSON_UNESCAPED_UNICODE)) ?></code></td>
                   <td class="text-muted small"><?= htmlspecialchars(is_scalar($ex['payment_id']) ? (string)$ex['payment_id'] : '') ?></td>
                 </tr>
               <?php endforeach; ?>
@@ -148,13 +170,14 @@ require __DIR__ . '/../partials/layout_top.php';
           <h3 class="h6"><?= htmlspecialchars($t->t('smartomato.order_details', 'Order details (payments array tekshiruvi)')) ?></h3>
           <div class="table-responsive">
             <table class="table table-sm mb-0">
-              <thead><tr><th>ID</th><th>source</th><th>payment_source</th><th>payment_id(detail)</th><th>payments_count</th></tr></thead>
+              <thead><tr><th>ID</th><th>source</th><th>payment_source</th><th>delivery_like(detail)</th><th>payment_id(detail)</th><th>payments_count</th></tr></thead>
               <tbody>
               <?php foreach (($debug['details'] ?? []) as $d): ?>
                 <tr>
                   <td><?= (int)$d['id'] ?></td>
                   <td><code><?= htmlspecialchars((string)$d['source']) ?></code></td>
                   <td><code><?= htmlspecialchars((string)$d['payment_source']) ?></code></td>
+                  <td class="text-muted small"><code><?= htmlspecialchars(json_encode($d['delivery_like'] ?? [], JSON_UNESCAPED_UNICODE)) ?></code></td>
                   <td class="text-muted small"><?= htmlspecialchars(is_scalar($d['payment_id']) ? (string)$d['payment_id'] : '') ?></td>
                   <td><?= htmlspecialchars(is_null($d['payments_count']) ? '-' : (string)$d['payments_count']) ?></td>
                 </tr>

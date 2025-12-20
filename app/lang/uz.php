@@ -110,6 +110,7 @@ return [
     'bugungi.err.no_taxi' => 'Yandex taxi yuklanmagan',
     'bugungi.err.no_staff' => 'Ishchilar ish haqi kam (kamida 3 ta kiriting)',
     'bugungi.sent' => 'Telegramga yuborildi',
+    'bugungi.client_paid.not_supported' => "“Zaplatil klient” ishlashi uchun bazada delivery_client_sum ustuni bo‘lishi kerak. SQL ni ishlating va Smartomato sahifasida shu sanani qayta yig‘ing.",
 
     'taxi.roundtrip' => 'Tuda-obratno',
     'taxi.duplicate' => 'Ikki marta',

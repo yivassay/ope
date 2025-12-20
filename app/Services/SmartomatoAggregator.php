@@ -228,6 +228,11 @@ final class SmartomatoAggregator
     {
         $candidates = [
             'delivery_client_sum',
+            'client_delivery_sum',
+            'delivery_sum_client',
+            'delivery_client_price',
+            'delivery_client_cost',
+            'delivery_paid_by_client',
             'delivery_price',
             'delivery_cost',
             'delivery_fee',
@@ -248,6 +253,22 @@ final class SmartomatoAggregator
                     if (is_numeric($vv)) return (float)$vv;
                 }
             }
+        }
+
+        // Heuristic fallback: any numeric "delivery"/"shipping" scalar field (choose smallest positive)
+        $nums = [];
+        foreach ($order as $k => $v) {
+            if (!is_string($k)) continue;
+            $lk = strtolower($k);
+            if (strpos($lk, 'delivery') === false && strpos($lk, 'shipping') === false) continue;
+            if (is_numeric($v)) {
+                $f = (float)$v;
+                if ($f > 0) $nums[] = $f;
+            }
+        }
+        if ($nums) {
+            sort($nums);
+            return (float)$nums[0];
         }
         // Sometimes nested:
         if (isset($order['delivery']) && is_array($order['delivery'])) {

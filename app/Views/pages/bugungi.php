@@ -21,6 +21,7 @@
 /** @var array $byPayment */
 /** @var array $salaryRows */
 /** @var float $clientPaidDelivery */
+/** @var bool $clientPaidDeliverySupported */
 /** @var string|null $sendMessage */
 /** @var string|null $sendError */
 require __DIR__ . '/../partials/layout_top.php';
@@ -71,6 +72,12 @@ $taxiDiff = $taxiGross - (float)$clientPaidDelivery;
 <?php endif; ?>
 <?php if (($sendError ?? null)): ?>
   <div class="alert alert-danger"><?= htmlspecialchars((string)$sendError) ?></div>
+<?php endif; ?>
+
+<?php if (!($clientPaidDeliverySupported ?? true)): ?>
+  <div class="alert alert-warning">
+    <?= htmlspecialchars($t->t('bugungi.client_paid.not_supported', '“Opłatil klient” ishlashi uchun bazada delivery_client_sum ustuni bo‘lishi kerak. Schema yangilang va Smartomato ni qayta yig‘ing.')) ?>
+  </div>
 <?php endif; ?>
 
 <div class="mb-3">
@@ -211,7 +218,7 @@ $taxiDiff = $taxiGross - (float)$clientPaidDelivery;
     <div class="card"><div class="card-body">
       <div class="table-responsive">
         <table class="table table-sm mb-0">
-          <thead><tr><th><?= htmlspecialchars($t->t('common.channel', 'Kanal')) ?></th><th class="text-end">Cnt</th><th class="text-end"><?= htmlspecialchars($t->t('common.sum', 'Summa')) ?></th></tr></thead>
+          <thead><tr><th><?= htmlspecialchars($t->t('common.channel', 'Kanal')) ?></th><th class="text-end"><?= htmlspecialchars($t->t('common.count', 'Cnt')) ?></th><th class="text-end"><?= htmlspecialchars($t->t('common.sum', 'Summa')) ?></th></tr></thead>
           <tbody>
             <?php foreach ($byChannel as $ch => $r): ?>
               <?php if ($ch === 'board') continue; ?>
@@ -231,7 +238,7 @@ $taxiDiff = $taxiGross - (float)$clientPaidDelivery;
     <div class="card"><div class="card-body">
       <div class="table-responsive">
         <table class="table table-sm mb-0">
-          <thead><tr><th><?= htmlspecialchars($t->t('bugungi.payment', "To‘lov")) ?></th><th class="text-end">Cnt</th><th class="text-end"><?= htmlspecialchars($t->t('common.sum', 'Summa')) ?></th></tr></thead>
+          <thead><tr><th><?= htmlspecialchars($t->t('bugungi.payment', "To‘lov")) ?></th><th class="text-end"><?= htmlspecialchars($t->t('common.count', 'Cnt')) ?></th><th class="text-end"><?= htmlspecialchars($t->t('common.sum', 'Summa')) ?></th></tr></thead>
           <tbody>
             <?php foreach ($byPayment as $r): ?>
               <?php $ps = (string)$r['payment_source']; ?>

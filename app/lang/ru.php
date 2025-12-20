@@ -110,6 +110,7 @@ return [
     'bugungi.err.no_taxi' => 'Yandex такси не загружен',
     'bugungi.err.no_staff' => 'Мало внесённых зарплат (нужно минимум 3 сотрудника)',
     'bugungi.sent' => 'Отправлено в Telegram',
+    'bugungi.client_paid.not_supported' => 'Чтобы работало “Оплатил клиент”, в базе должна быть колонка delivery_client_sum. Выполните SQL и затем пересоберите Smartomato за эту дату.',
 
     'taxi.roundtrip' => 'Туда-обратно',
     'taxi.duplicate' => 'Два раза',
