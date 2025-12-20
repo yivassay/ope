@@ -40,7 +40,18 @@ final class BugungiController extends BaseController
             'uzum' => (float)($settings->get('commission.uzum', '0') ?? 0),
         ];
 
-        // Profit: totals
+        // Profit base: split Smartomato into non-aggregator delivery/pickup and aggregator gross.
+        // IMPORTANT: channel values may be customized via settings (smartomato.channel_map),
+        // so we classify channels with aliases instead of hardcoding channel="yandex".
+        $yandexAliases = ['yandex', 'foodfox', 'yandex_eda', 'yandexeda', 'yandex_eda_mobile', 'yandexeda_mobile'];
+        $woltAliases = ['wolt', 'wolt_mobile'];
+        $normalize = static function (string $v): string {
+            $v = strtolower(trim($v));
+            $v = str_replace([' ', "\t", "\r", "\n"], '', $v);
+            return $v;
+        };
+
+        // Totals for the day (all channels)
         $q = 'SELECT COALESCE(SUM(order_count),0) AS cnt, COALESCE(SUM(sum_final),0) AS sum_final FROM smartomato_daily_stats WHERE stat_date=:d';
         $params = ['d' => $date];
         if ($restaurantId > 0) {
@@ -51,46 +62,59 @@ final class BugungiController extends BaseController
         $stmt->execute($params);
         $total = $stmt->fetch(PDO::FETCH_ASSOC) ?: ['cnt' => 0, 'sum_final' => 0];
 
-        // Delivery/pickup without aggregators (exclude yandex/wolt channels)
+        // Fetch day split by channel + delivery_type, then classify.
         $q = '
-            SELECT delivery_type, COALESCE(SUM(order_count),0) AS cnt, COALESCE(SUM(sum_final),0) AS sum_final
+            SELECT channel, delivery_type,
+                   COALESCE(SUM(order_count),0) AS cnt,
+                   COALESCE(SUM(sum_final),0) AS sum_final
             FROM smartomato_daily_stats
-            WHERE stat_date=:d AND channel NOT IN ("yandex","wolt")
+            WHERE stat_date=:d
         ';
         $params = ['d' => $date];
         if ($restaurantId > 0) {
             $q .= ' AND restaurant_id=:rid';
             $params['rid'] = $restaurantId;
         }
-        $q .= ' GROUP BY delivery_type';
+        $q .= ' GROUP BY channel, delivery_type';
         $stmt = $this->db->prepare($q);
         $stmt->execute($params);
-        $byTypeNoAgg = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
         $deliveryNoAgg = ['cnt' => 0, 'sum_final' => 0];
         $pickupNoAgg = ['cnt' => 0, 'sum_final' => 0];
-        foreach ($byTypeNoAgg as $r) {
-            if (($r['delivery_type'] ?? '') === 'delivery') $deliveryNoAgg = $r;
-            if (($r['delivery_type'] ?? '') === 'pickup') $pickupNoAgg = $r;
+        $agg = ['yandex' => ['cnt' => 0, 'sum_final' => 0], 'wolt' => ['cnt' => 0, 'sum_final' => 0]];
+        foreach ($rows as $r) {
+            $ch = $normalize((string)($r['channel'] ?? ''));
+            $dt = (string)($r['delivery_type'] ?? '');
+            $cnt = (int)($r['cnt'] ?? 0);
+            $sum = (float)($r['sum_final'] ?? 0);
+
+            if (in_array($ch, array_map($normalize, $yandexAliases), true)) {
+                $agg['yandex']['cnt'] += $cnt;
+                $agg['yandex']['sum_final'] += $sum;
+                continue;
+            }
+            if (in_array($ch, array_map($normalize, $woltAliases), true)) {
+                $agg['wolt']['cnt'] += $cnt;
+                $agg['wolt']['sum_final'] += $sum;
+                continue;
+            }
+
+            // Non-aggregator: split by delivery_type
+            if ($dt === 'delivery') {
+                $deliveryNoAgg['cnt'] += $cnt;
+                $deliveryNoAgg['sum_final'] += $sum;
+            } elseif ($dt === 'pickup') {
+                $pickupNoAgg['cnt'] += $cnt;
+                $pickupNoAgg['sum_final'] += $sum;
+            }
         }
 
-        // Aggregators totals: yandex+wolt from Smartomato + uzum manual
-        $q = '
-            SELECT channel, COALESCE(SUM(order_count),0) AS cnt, COALESCE(SUM(sum_final),0) AS sum_final
-            FROM smartomato_daily_stats
-            WHERE stat_date=:d AND channel IN ("yandex","wolt")
-        ';
-        $params = ['d' => $date];
-        if ($restaurantId > 0) {
-            $q .= ' AND restaurant_id=:rid';
-            $params['rid'] = $restaurantId;
-        }
-        $q .= ' GROUP BY channel';
-        $stmt = $this->db->prepare($q);
-        $stmt->execute($params);
-        $agg = ['yandex' => ['cnt' => 0, 'sum_final' => 0], 'wolt' => ['cnt' => 0, 'sum_final' => 0]];
-        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
-            $agg[(string)$r['channel']] = $r;
-        }
+        // Keep same shape as before (arrays from DB)
+        $agg['yandex']['channel'] = 'yandex';
+        $agg['wolt']['channel'] = 'wolt';
+        $deliveryNoAgg['delivery_type'] = 'delivery';
+        $pickupNoAgg['delivery_type'] = 'pickup';
         $uzum = ['cnt' => 0, 'sum_final' => 0];
         try {
             $stmt = $this->db->prepare('SELECT COALESCE(SUM(order_count),0) AS cnt, COALESCE(SUM(sum_final),0) AS sum_final FROM uzum_daily_stats WHERE stat_date=:d');
@@ -163,6 +187,8 @@ final class BugungiController extends BaseController
         $taxi = [
             'sum_total' => 0.0,
             'sum_waiting' => 0.0,
+            'paid_cancel_count' => 0,
+            'paid_cancel_sum' => 0.0,
             'roundtrip_count' => 0,
             'duplicate_3h_count' => 0,
             'duplicate_3h_sum_total' => 0.0,
@@ -175,6 +201,8 @@ final class BugungiController extends BaseController
                 $stmt = $this->db->prepare('
                     SELECT COALESCE(SUM(sum_total + paid_cancel_sum + returned_sum),0) AS sum_total,
                            COALESCE(SUM(sum_waiting),0) AS sum_waiting,
+                           COALESCE(SUM(paid_cancel_count),0) AS paid_cancel_count,
+                           COALESCE(SUM(paid_cancel_sum),0) AS paid_cancel_sum,
                            COALESCE(SUM(roundtrip_count),0) AS roundtrip_count,
                            COALESCE(SUM(duplicate_3h_count),0) AS duplicate_3h_count,
                            COALESCE(SUM(duplicate_3h_sum_total),0) AS duplicate_3h_sum_total,
@@ -189,6 +217,8 @@ final class BugungiController extends BaseController
                 $stmt = $this->db->prepare('
                     SELECT COALESCE(SUM(sum_total + paid_cancel_sum + returned_sum),0) AS sum_total,
                            COALESCE(SUM(sum_waiting),0) AS sum_waiting,
+                           COALESCE(SUM(paid_cancel_count),0) AS paid_cancel_count,
+                           COALESCE(SUM(paid_cancel_sum),0) AS paid_cancel_sum,
                            COALESCE(SUM(roundtrip_count),0) AS roundtrip_count,
                            COALESCE(SUM(duplicate_3h_count),0) AS duplicate_3h_count,
                            COALESCE(SUM(duplicate_3h_sum_total),0) AS duplicate_3h_sum_total,
@@ -202,6 +232,52 @@ final class BugungiController extends BaseController
             }
         } catch (Throwable) {
             // ignore
+        }
+
+        // Waiting by restaurant (for "top waiting" insight)
+        $waitingTop = ['restaurant_name' => '', 'sum_waiting' => 0.0];
+        $waitingByRestaurant = [];
+        try {
+            if ($restaurantId > 0) {
+                $rName = $restaurants[(string)$restaurantId] ?? ('Restaurant ' . $restaurantId);
+                $waitingByRestaurant = [['restaurant_name' => $rName, 'sum_waiting' => (float)($taxi['sum_waiting'] ?? 0)]];
+                $waitingTop = $waitingByRestaurant[0];
+            } else {
+                $stmt = $this->db->prepare('
+                    SELECT restaurant_name, COALESCE(SUM(sum_waiting),0) AS sum_waiting
+                    FROM taxi_daily_stats
+                    WHERE stat_date=:d
+                    GROUP BY restaurant_name
+                    ORDER BY sum_waiting DESC
+                ');
+                $stmt->execute(['d' => $date]);
+                $waitingByRestaurant = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                if ($waitingByRestaurant) {
+                    $waitingTop = [
+                        'restaurant_name' => (string)($waitingByRestaurant[0]['restaurant_name'] ?? ''),
+                        'sum_waiting' => (float)($waitingByRestaurant[0]['sum_waiting'] ?? 0),
+                    ];
+                }
+            }
+        } catch (Throwable) {
+            $waitingTop = ['restaurant_name' => '', 'sum_waiting' => 0.0];
+            $waitingByRestaurant = [];
+        }
+
+        // Roundtrip sum (not stored in taxi_daily_stats)
+        $taxiRoundtrip = ['cnt' => 0, 'sum_total' => 0.0];
+        try {
+            $q = 'SELECT COALESCE(COUNT(*),0) AS cnt, COALESCE(SUM(sum_total),0) AS sum_total FROM taxi_trips WHERE trip_date=:d AND is_roundtrip=1';
+            $params = ['d' => $date];
+            if ($restaurantId > 0) {
+                $q .= ' AND restaurant_name=:rn';
+                $params['rn'] = $restaurants[(string)$restaurantId] ?? ('Restaurant ' . $restaurantId);
+            }
+            $stmt = $this->db->prepare($q);
+            $stmt->execute($params);
+            $taxiRoundtrip = $stmt->fetch(PDO::FETCH_ASSOC) ?: $taxiRoundtrip;
+        } catch (Throwable) {
+            $taxiRoundtrip = ['cnt' => 0, 'sum_total' => 0.0];
         }
 
         // Millennium taxi
@@ -331,14 +407,14 @@ final class BugungiController extends BaseController
                 $chatId = (string)$settings->get('telegram.chat_id', '');
 
                 // Profit: aggregator sums should be net (commission removed)
-                $ySum = (float)($y['sum_final'] ?? 0);
-                $wSum = (float)($w['sum_final'] ?? 0);
-                $uSum = (float)($u['sum_final'] ?? 0);
+                $ySum = (float)($agg['yandex']['sum_final'] ?? 0);
+                $wSum = (float)($agg['wolt']['sum_final'] ?? 0);
+                $uSum = (float)($uzum['sum_final'] ?? 0);
                 $yNet = $ySum * (1 - ((float)$commission['yandex'] / 100));
                 $wNet = $wSum * (1 - ((float)$commission['wolt'] / 100));
                 $uNet = $uSum * (1 - ((float)$commission['uzum'] / 100));
 
-                $nonAggSum = (float)($total['sum_final'] ?? 0) - $ySum - $wSum;
+                $nonAggSum = (float)($deliveryNoAgg['sum_final'] ?? 0) + (float)($pickupNoAgg['sum_final'] ?? 0);
                 $profitTotal = max(0.0, $nonAggSum + $yNet + $wNet + $uNet);
 
                 // Expenses: subtract what client paid for delivery
@@ -348,39 +424,33 @@ final class BugungiController extends BaseController
                     + (float)($err['sum'] ?? 0)
                     - (float)$clientPaidDelivery;
 
-                $pct = static function (float $v) use ($profitTotal): string {
-                    if ($profitTotal <= 0) return '0%';
-                    return number_format(($v / $profitTotal) * 100.0, 1, '.', '') . '%';
-                };
                 $money = static function (float $v): string {
                     return number_format($v, 2, '.', ' ');
                 };
 
-                $title = ($restaurantId > 0) ? (' (' . ($restaurants[(string)$restaurantId] ?? ('Restaurant ' . $restaurantId)) . ')') : '';
+                $title = ($restaurantId > 0) ? (' ' . ($restaurants[(string)$restaurantId] ?? ('Restaurant ' . $restaurantId))) : '';
+                $netProfit = $profitTotal - $expensesTotal;
+                $taxiGross = (float)($taxi['sum_total'] ?? 0) + (float)$millSum;
+                $taxiDiff = $taxiGross - (float)$clientPaidDelivery;
 
                 $lines = [];
-                $lines[] = "<b>💰Foyda{$title}</b>";
+                $lines[] = "📞CALL CENTER MK {$date}{$title}";
+                $lines[] = "";
+                $lines[] = "<b>💰Foyda</b>";
                 $lines[] = "Jami summa: <b>{$money($profitTotal)}</b>";
-                $lines[] = "Yandex: {$money($yNet)}";
+                $lines[] = "Foyda: <b>{$money($netProfit)}</b>";
+                $lines[] = "Yandex Eda: {$money($yNet)}";
                 $lines[] = "Uzum: {$money($uNet)}";
                 $lines[] = "Wolt: {$money($wNet)}";
                 $lines[] = "";
                 $lines[] = "<b>💸Xarajatlar</b>";
-                $lines[] = "Jami summa: <b>{$money($expensesTotal)}</b> ({$pct($expensesTotal)})";
-                $lines[] = "Ish haqi (jami): {$money((float)$salarySum)} ({$pct((float)$salarySum)})";
-                $lines[] = "Yandex taxi: {$money((float)($taxi['sum_total'] ?? 0))} ({$pct((float)($taxi['sum_total'] ?? 0))})";
-                $lines[] = "Millenium: {$money((float)$millSum)} ({$pct((float)$millSum)})";
+                $lines[] = "- Ish haqi: {$money((float)$salarySum)}";
+                $lines[] = "- Yandex taxi: {$money((float)($taxi['sum_total'] ?? 0))}";
+                $lines[] = "- Millennium: {$money((float)$millSum)}";
+                $lines[] = "- Opłatıl klient: {$money((float)$clientPaidDelivery)}";
+                $lines[] = "- Farq (Yandex+Millennium − Opłatıl klient): <b>{$money($taxiDiff)}</b>";
                 if ((int)($err['cnt'] ?? 0) > 0) {
-                    $lines[] = "Kosyaklar: " . (int)$err['cnt'] . " ta, {$money((float)$err['sum'])}";
-                }
-                if ((int)($taxi['roundtrip_count'] ?? 0) > 0) {
-                    $lines[] = "Tuda-obratno: " . (int)$taxi['roundtrip_count'] . " ta";
-                }
-                if ((int)($taxi['duplicate_3h_count'] ?? 0) > 0) {
-                    $lines[] = "Ikki marta: " . (int)$taxi['duplicate_3h_count'] . " ta, {$money((float)$taxi['duplicate_3h_sum_total'])}";
-                }
-                if ((int)($taxi['returned_count'] ?? 0) > 0) {
-                    $lines[] = "Qaytgan (возврат): " . (int)$taxi['returned_count'] . " ta, {$money((float)$taxi['returned_sum'])}";
+                    $lines[] = "- Kosyaklar: " . (int)$err['cnt'] . " ta, {$money((float)$err['sum'])}";
                 }
 
                 $lines[] = "";
@@ -401,6 +471,37 @@ final class BugungiController extends BaseController
                         $oc = (int)($r['order_count'] ?? 0);
                         $lines[] = "{$name}: {$money($sal)} ({$oc} ta)";
                     }
+                }
+
+                $lines[] = "";
+                $lines[] = "<b>ℹ️E'tibor bering:</b>";
+                $lines[] = "Płatnoe ojidanie (jami): {$money((float)($taxi['sum_waiting'] ?? 0))}";
+                if (!empty($waitingTop['restaurant_name']) && (float)($waitingTop['sum_waiting'] ?? 0) > 0) {
+                    $lines[] = "Top ojidanie: {$waitingTop['restaurant_name']} — {$money((float)$waitingTop['sum_waiting'])}";
+                }
+                $topList = array_slice($waitingByRestaurant, 0, 3);
+                if ($restaurantId === 0 && $topList) {
+                    $lines[] = "Ojidanie (top 3):";
+                    foreach ($topList as $wr) {
+                        $rn = (string)($wr['restaurant_name'] ?? '');
+                        $sv = (float)($wr['sum_waiting'] ?? 0);
+                        if ($rn !== '' && $sv > 0) {
+                            $lines[] = "- {$rn}: {$money($sv)}";
+                        }
+                    }
+                }
+
+                if ((int)($taxi['paid_cancel_count'] ?? 0) > 0) {
+                    $lines[] = "Płatnaya otmena: " . (int)$taxi['paid_cancel_count'] . " ta, {$money((float)($taxi['paid_cancel_sum'] ?? 0))}";
+                }
+                if ((int)($taxi['returned_count'] ?? 0) > 0) {
+                    $lines[] = "Vozvrashena: " . (int)$taxi['returned_count'] . " ta, {$money((float)($taxi['returned_sum'] ?? 0))}";
+                }
+                if ((int)($taxi['duplicate_3h_count'] ?? 0) > 0) {
+                    $lines[] = "Otpravleno dva raza: " . (int)$taxi['duplicate_3h_count'] . " ta, {$money((float)($taxi['duplicate_3h_sum_total'] ?? 0))}";
+                }
+                if ((int)($taxiRoundtrip['cnt'] ?? 0) > 0) {
+                    $lines[] = "Tuda-obratno: " . (int)$taxiRoundtrip['cnt'] . " ta, {$money((float)($taxiRoundtrip['sum_total'] ?? 0))}";
                 }
 
                 $text = implode("\n", $lines);
@@ -424,6 +525,9 @@ final class BugungiController extends BaseController
             'salarySum' => $salarySum,
             'salaryRows' => $salaryRows,
             'taxi' => $taxi,
+            'waitingTop' => $waitingTop,
+            'waitingByRestaurant' => $waitingByRestaurant,
+            'taxiRoundtrip' => $taxiRoundtrip,
             'millSum' => $millSum,
             'err' => $err,
             'byChannel' => $byChannel,

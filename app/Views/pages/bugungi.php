@@ -22,6 +22,9 @@
 /** @var array $salaryRows */
 /** @var float $clientPaidDelivery */
 /** @var bool $clientPaidDeliverySupported */
+/** @var array $waitingTop */
+/** @var array $waitingByRestaurant */
+/** @var array $taxiRoundtrip */
 /** @var string|null $sendMessage */
 /** @var string|null $sendError */
 require __DIR__ . '/../partials/layout_top.php';
@@ -50,12 +53,19 @@ $wNet = $wSum * (1 - ((float)$commission['wolt']/100));
 $uNet = $uSum * (1 - ((float)$commission['uzum']/100));
 
 // Profit total should use aggregator net (commission removed)
-$nonAggSum = (float)($total['sum_final'] ?? 0) - $ySum - $wSum;
+$nonAggSum = (float)($deliveryNoAgg['sum_final'] ?? 0) + (float)($pickupNoAgg['sum_final'] ?? 0);
 $profitTotal = max(0.0, $nonAggSum + $yNet + $wNet + $uNet);
 
-$pct = static function (float $v) use ($profitTotal): string {
+$pctProfit = static function (float $v) use ($profitTotal): string {
     if ($profitTotal <= 0) return '0%';
     return number_format(($v / $profitTotal) * 100.0, 1, '.', '') . '%';
+};
+
+// Expense percentages should be relative to non-aggregator base (delivery+pickup without aggregators)
+$expenseBase = (float)($deliveryNoAgg['sum_final'] ?? 0) + (float)($pickupNoAgg['sum_final'] ?? 0);
+$pctExpense = static function (float $v) use ($expenseBase): string {
+    if ($expenseBase <= 0) return '0%';
+    return number_format(($v / $expenseBase) * 100.0, 1, '.', '') . '%';
 };
 
 // Expenses total: salaries + taxi + errors - client paid delivery
@@ -124,7 +134,7 @@ $taxiDiff = $taxiGross - (float)$clientPaidDelivery;
         </div>
         <p class="fw-medium text-sm text-primary-light mt-12 mb-0 d-flex align-items-center gap-2">
           <span class="d-inline-flex align-items-center gap-1 text-success-main">
-            <i class="ri-arrow-right-up-line text-xs"></i> <?= htmlspecialchars($pct($profitTotal)) ?>
+            <i class="ri-arrow-right-up-line text-xs"></i> <?= htmlspecialchars($pctProfit($profitTotal)) ?>
           </span>
           <?= htmlspecialchars($t->t('bugungi.card.of_total_profit', 'ulushi')) ?>
         </p>
@@ -145,7 +155,7 @@ $taxiDiff = $taxiGross - (float)$clientPaidDelivery;
         </div>
         <p class="fw-medium text-sm text-primary-light mt-12 mb-0 d-flex align-items-center gap-2">
           <span class="d-inline-flex align-items-center gap-1 text-danger-main">
-            <i class="ri-arrow-right-down-line text-xs"></i> <?= htmlspecialchars($pct($expensesTotal)) ?>
+            <i class="ri-arrow-right-down-line text-xs"></i> <?= htmlspecialchars($pctExpense($expensesTotal)) ?>
           </span>
           <?= htmlspecialchars($t->t('bugungi.card.of_total_profit', 'ulushi')) ?>
         </p>
@@ -166,7 +176,7 @@ $taxiDiff = $taxiGross - (float)$clientPaidDelivery;
         </div>
         <p class="fw-medium text-sm text-primary-light mt-12 mb-0 d-flex align-items-center gap-2">
           <span class="d-inline-flex align-items-center gap-1 <?= ($netProfit >= 0) ? 'text-success-main' : 'text-danger-main' ?>">
-            <i class="<?= ($netProfit >= 0) ? 'ri-arrow-right-up-line' : 'ri-arrow-right-down-line' ?> text-xs"></i> <?= htmlspecialchars($pct($netProfit)) ?>
+            <i class="<?= ($netProfit >= 0) ? 'ri-arrow-right-up-line' : 'ri-arrow-right-down-line' ?> text-xs"></i> <?= htmlspecialchars($pctProfit($netProfit)) ?>
           </span>
           <?= htmlspecialchars($t->t('bugungi.card.of_total_profit', 'ulushi')) ?>
         </p>
@@ -187,7 +197,7 @@ $taxiDiff = $taxiGross - (float)$clientPaidDelivery;
         </div>
         <p class="fw-medium text-sm text-primary-light mt-12 mb-0 d-flex align-items-center gap-2">
           <span class="d-inline-flex align-items-center gap-1 text-success-main">
-            <i class="ri-arrow-right-up-line text-xs"></i> <?= htmlspecialchars($pct((float)($clientPaidDelivery ?? 0))) ?>
+            <i class="ri-arrow-right-up-line text-xs"></i> <?= htmlspecialchars($pctExpense((float)($clientPaidDelivery ?? 0))) ?>
           </span>
           <?= htmlspecialchars($t->t('bugungi.card.of_total_profit', 'ulushi')) ?>
         </p>
@@ -228,7 +238,7 @@ $taxiDiff = $taxiGross - (float)$clientPaidDelivery;
               </div>
               <div class="d-flex align-items-center gap-3">
                 <span class="fw-semibold"><?= money((float)$it['value']) ?></span>
-                <span class="text-secondary-light fw-semibold"><?= htmlspecialchars($pct((float)$it['value'])) ?></span>
+                <span class="text-secondary-light fw-semibold"><?= htmlspecialchars($pctProfit((float)$it['value'])) ?></span>
               </div>
             </div>
           <?php endforeach; ?>
@@ -245,9 +255,9 @@ $taxiDiff = $taxiGross - (float)$clientPaidDelivery;
           <table class="table table-sm mb-0">
             <thead><tr><th><?= htmlspecialchars($t->t('common.channel', 'Kanal')) ?></th><th class="text-end"><?= htmlspecialchars($t->t('common.count', 'Cnt')) ?></th><th class="text-end"><?= htmlspecialchars($t->t('common.sum', 'Summa')) ?></th><th class="text-end"><?= htmlspecialchars($t->t('common.commission', 'Komissiya')) ?></th><th class="text-end"><?= htmlspecialchars($t->t('common.net', 'Net')) ?></th></tr></thead>
             <tbody>
-              <tr><td>Yandex Eda</td><td class="text-end"><?= num0($y['cnt']) ?></td><td class="text-end"><?= money($y['sum_final']) ?></td><td class="text-end"><?= money($commission['yandex']) ?>%</td><td class="text-end"><?= money($yNet) ?> <span class="text-muted small">(<?= $pct((float)$yNet) ?>)</span></td></tr>
-              <tr><td>Wolt</td><td class="text-end"><?= num0($w['cnt']) ?></td><td class="text-end"><?= money($w['sum_final']) ?></td><td class="text-end"><?= money($commission['wolt']) ?>%</td><td class="text-end"><?= money($wNet) ?> <span class="text-muted small">(<?= $pct((float)$wNet) ?>)</span></td></tr>
-              <tr><td>Uzum (qo‘lda)</td><td class="text-end"><?= num0($u['cnt']) ?></td><td class="text-end"><?= money($u['sum_final']) ?></td><td class="text-end"><?= money($commission['uzum']) ?>%</td><td class="text-end"><?= money($uNet) ?> <span class="text-muted small">(<?= $pct((float)$uNet) ?>)</span></td></tr>
+              <tr><td>Yandex Eda</td><td class="text-end"><?= num0($y['cnt']) ?></td><td class="text-end"><?= money($y['sum_final']) ?></td><td class="text-end"><?= money($commission['yandex']) ?>%</td><td class="text-end"><?= money($yNet) ?> <span class="text-muted small">(<?= $pctProfit((float)$yNet) ?>)</span></td></tr>
+              <tr><td>Wolt</td><td class="text-end"><?= num0($w['cnt']) ?></td><td class="text-end"><?= money($w['sum_final']) ?></td><td class="text-end"><?= money($commission['wolt']) ?>%</td><td class="text-end"><?= money($wNet) ?> <span class="text-muted small">(<?= $pctProfit((float)$wNet) ?>)</span></td></tr>
+              <tr><td>Uzum (qo‘lda)</td><td class="text-end"><?= num0($u['cnt']) ?></td><td class="text-end"><?= money($u['sum_final']) ?></td><td class="text-end"><?= money($commission['uzum']) ?>%</td><td class="text-end"><?= money($uNet) ?> <span class="text-muted small">(<?= $pctProfit((float)$uNet) ?>)</span></td></tr>
             </tbody>
           </table>
         </div>
@@ -297,12 +307,12 @@ $taxiDiff = $taxiGross - (float)$clientPaidDelivery;
             </div>
             <div class="d-flex align-items-center gap-3">
               <span class="fw-semibold"><?= money((float)($clientPaidDelivery ?? 0)) ?></span>
-              <span class="text-secondary-light fw-semibold"><?= htmlspecialchars($pct((float)($clientPaidDelivery ?? 0))) ?></span>
+              <span class="text-secondary-light fw-semibold"><?= htmlspecialchars($pctExpense((float)($clientPaidDelivery ?? 0))) ?></span>
             </div>
           </div>
           <div class="d-flex justify-content-between align-items-center">
             <div class="fw-semibold"><?= htmlspecialchars($t->t('bugungi.expenses.total', 'Jami xarajat')) ?></div>
-            <div class="fw-semibold"><?= money($expensesTotal) ?> <span class="text-secondary-light fw-semibold">(<?= htmlspecialchars($pct((float)$expensesTotal)) ?>)</span></div>
+            <div class="fw-semibold"><?= money($expensesTotal) ?> <span class="text-secondary-light fw-semibold">(<?= htmlspecialchars($pctExpense((float)$expensesTotal)) ?>)</span></div>
           </div>
         </div>
       </div>
@@ -312,35 +322,41 @@ $taxiDiff = $taxiGross - (float)$clientPaidDelivery;
     <div class="card"><div class="card-body py-3">
       <div class="text-muted small"><?= htmlspecialchars($t->t('bugungi.expenses.total', 'Jami xarajat')) ?></div>
       <div class="fs-5 fw-semibold"><?= money($expensesTotal) ?></div>
-      <div class="text-muted small"><?= $pct($expensesTotal) ?></div>
+      <div class="text-muted small"><?= $pctExpense($expensesTotal) ?></div>
     </div></div>
   </div>
   <div class="col-6 col-lg-3">
     <div class="card"><div class="card-body py-3">
       <div class="text-muted small"><?= htmlspecialchars($t->t('bugungi.expenses.salary', 'Ish haqi (jami)')) ?></div>
       <div class="fs-5 fw-semibold"><?= money($salarySum) ?></div>
-      <div class="text-muted small"><?= $pct((float)$salarySum) ?></div>
+      <div class="text-muted small"><?= $pctExpense((float)$salarySum) ?></div>
     </div></div>
   </div>
   <div class="col-6 col-lg-3">
     <div class="card"><div class="card-body py-3">
       <div class="text-muted small"><?= htmlspecialchars($t->t('bugungi.expenses.taxi_yandex', 'Taxi Yandex (jami)')) ?></div>
       <div class="fs-5 fw-semibold"><?= money($taxi['sum_total'] ?? 0) ?></div>
-      <div class="text-muted small"><?= $pct((float)($taxi['sum_total'] ?? 0)) ?> · <?= htmlspecialchars($t->t('bugungi.expenses.waiting', 'Kutish')) ?>: <?= money($taxi['sum_waiting'] ?? 0) ?></div>
+      <div class="text-muted small">
+        <?= $pctExpense((float)($taxi['sum_total'] ?? 0)) ?>
+        · <?= htmlspecialchars($t->t('bugungi.expenses.waiting', 'Kutish')) ?>: <?= money($taxi['sum_waiting'] ?? 0) ?>
+        <?php if (!empty(($waitingTop['restaurant_name'] ?? '')) && (float)($waitingTop['sum_waiting'] ?? 0) > 0): ?>
+          · Top: <?= htmlspecialchars((string)$waitingTop['restaurant_name']) ?> (<?= money((float)$waitingTop['sum_waiting']) ?>)
+        <?php endif; ?>
+      </div>
     </div></div>
   </div>
   <div class="col-6 col-lg-3">
     <div class="card"><div class="card-body py-3">
       <div class="text-muted small"><?= htmlspecialchars($t->t('bugungi.expenses.taxi_millennium', 'Taxi Millennium')) ?></div>
       <div class="fs-5 fw-semibold"><?= money($millSum) ?></div>
-      <div class="text-muted small"><?= $pct((float)$millSum) ?></div>
+      <div class="text-muted small"><?= $pctExpense((float)$millSum) ?></div>
     </div></div>
   </div>
   <div class="col-6 col-lg-3">
     <div class="card"><div class="card-body py-3">
       <div class="text-muted small"><?= htmlspecialchars($t->t('bugungi.expenses.errors', 'Ko‘syaklar')) ?></div>
       <div class="fs-5 fw-semibold"><?= num0($err['cnt'] ?? 0) ?></div>
-      <div class="text-muted small"><?= money($err['sum'] ?? 0) ?> (<?= $pct((float)($err['sum'] ?? 0)) ?>)</div>
+      <div class="text-muted small"><?= money($err['sum'] ?? 0) ?> (<?= $pctExpense((float)($err['sum'] ?? 0)) ?>)</div>
     </div></div>
   </div>
 
@@ -348,14 +364,14 @@ $taxiDiff = $taxiGross - (float)$clientPaidDelivery;
     <div class="card"><div class="card-body py-3">
       <div class="text-muted small"><?= htmlspecialchars($t->t('bugungi.expenses.client_paid', 'Zaplatil klient')) ?></div>
       <div class="fs-5 fw-semibold"><?= money($clientPaidDelivery ?? 0) ?></div>
-      <div class="text-muted small"><?= $pct((float)($clientPaidDelivery ?? 0)) ?></div>
+      <div class="text-muted small"><?= $pctExpense((float)($clientPaidDelivery ?? 0)) ?></div>
     </div></div>
   </div>
   <div class="col-6 col-lg-3">
     <div class="card"><div class="card-body py-3">
       <div class="text-muted small"><?= htmlspecialchars($t->t('bugungi.expenses.taxi_diff', 'Farq')) ?></div>
       <div class="fs-5 fw-semibold"><?= money($taxiDiff) ?></div>
-      <div class="text-muted small"><?= htmlspecialchars($t->t('bugungi.expenses.taxi_diff_hint', 'Yandex+Millennium − Zaplatil klient')) ?> · <?= $pct((float)$taxiDiff) ?></div>
+      <div class="text-muted small"><?= htmlspecialchars($t->t('bugungi.expenses.taxi_diff_hint', 'Yandex+Millennium − Zaplatil klient')) ?> · <?= $pctExpense((float)$taxiDiff) ?></div>
     </div></div>
   </div>
 
