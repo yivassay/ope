@@ -10,7 +10,6 @@ if (!in_array($locale, ['uz', 'ru'], true)) $locale = 'uz';
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title><?= htmlspecialchars($t->t('app.title')) ?></title>
-  <link rel="icon" type="image/png" href="assets/wowdash/images/favicon.png" sizes="16x16">
   <link rel="stylesheet" href="assets/wowdash/css/remixicon.css">
   <link rel="stylesheet" href="assets/wowdash/css/lib/bootstrap.min.css">
   <link rel="stylesheet" href="assets/wowdash/css/style.css">
@@ -56,7 +55,7 @@ if (!in_array($locale, ['uz', 'ru'], true)) $locale = 'uz';
       </li>
       <li>
         <a href="?page=taxi">
-          <iconify-icon icon="solar:car-outline" class="menu-icon"></iconify-icon>
+          <iconify-icon icon="ri:taxi-line" class="menu-icon"></iconify-icon>
           <span><?= htmlspecialchars($t->t('nav.taxi', 'Taxi')) ?></span>
         </a>
       </li>

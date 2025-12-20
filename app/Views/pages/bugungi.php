@@ -109,44 +109,132 @@ $taxiDiff = $taxiGross - (float)$clientPaidDelivery;
   </form>
 </div>
 
+<div class="row gy-4 mb-4">
+  <div class="col-12 col-sm-6 col-xl-3">
+    <div class="card shadow-none border bg-gradient-start-1 h-100">
+      <div class="card-body p-20">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+          <div>
+            <p class="fw-medium text-primary-light mb-1"><?= htmlspecialchars($t->t('bugungi.card.income', 'Jami summa')) ?></p>
+            <h6 class="mb-0"><?= money($profitTotal) ?></h6>
+          </div>
+          <div class="w-50-px h-50-px bg-cyan rounded-circle d-flex justify-content-center align-items-center">
+            <i class="ri-money-dollar-circle-line text-white text-2xl mb-0"></i>
+          </div>
+        </div>
+        <p class="fw-medium text-sm text-primary-light mt-12 mb-0 d-flex align-items-center gap-2">
+          <span class="d-inline-flex align-items-center gap-1 text-success-main">
+            <i class="ri-arrow-right-up-line text-xs"></i> <?= htmlspecialchars($pct($profitTotal)) ?>
+          </span>
+          <?= htmlspecialchars($t->t('bugungi.card.of_total_profit', 'ulushi')) ?>
+        </p>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-sm-6 col-xl-3">
+    <div class="card shadow-none border bg-gradient-start-2 h-100">
+      <div class="card-body p-20">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+          <div>
+            <p class="fw-medium text-primary-light mb-1"><?= htmlspecialchars($t->t('bugungi.expenses.total', 'Jami xarajat')) ?></p>
+            <h6 class="mb-0"><?= money($expensesTotal) ?></h6>
+          </div>
+          <div class="w-50-px h-50-px bg-warning-main rounded-circle d-flex justify-content-center align-items-center">
+            <i class="ri-wallet-3-line text-white text-2xl mb-0"></i>
+          </div>
+        </div>
+        <p class="fw-medium text-sm text-primary-light mt-12 mb-0 d-flex align-items-center gap-2">
+          <span class="d-inline-flex align-items-center gap-1 text-danger-main">
+            <i class="ri-arrow-right-down-line text-xs"></i> <?= htmlspecialchars($pct($expensesTotal)) ?>
+          </span>
+          <?= htmlspecialchars($t->t('bugungi.card.of_total_profit', 'ulushi')) ?>
+        </p>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-sm-6 col-xl-3">
+    <div class="card shadow-none border bg-gradient-start-3 h-100">
+      <div class="card-body p-20">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+          <div>
+            <p class="fw-medium text-primary-light mb-1"><?= htmlspecialchars($t->t('bugungi.profit.net_profit', 'Chistaya foyda')) ?></p>
+            <h6 class="mb-0"><?= money($netProfit) ?></h6>
+          </div>
+          <div class="w-50-px h-50-px bg-purple rounded-circle d-flex justify-content-center align-items-center">
+            <i class="ri-hand-coin-line text-white text-2xl mb-0"></i>
+          </div>
+        </div>
+        <p class="fw-medium text-sm text-primary-light mt-12 mb-0 d-flex align-items-center gap-2">
+          <span class="d-inline-flex align-items-center gap-1 <?= ($netProfit >= 0) ? 'text-success-main' : 'text-danger-main' ?>">
+            <i class="<?= ($netProfit >= 0) ? 'ri-arrow-right-up-line' : 'ri-arrow-right-down-line' ?> text-xs"></i> <?= htmlspecialchars($pct($netProfit)) ?>
+          </span>
+          <?= htmlspecialchars($t->t('bugungi.card.of_total_profit', 'ulushi')) ?>
+        </p>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-sm-6 col-xl-3">
+    <div class="card shadow-none border bg-gradient-start-4 h-100">
+      <div class="card-body p-20">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+          <div>
+            <p class="fw-medium text-primary-light mb-1"><?= htmlspecialchars($t->t('bugungi.expenses.client_paid', 'Zaplatil klient')) ?></p>
+            <h6 class="mb-0"><?= money($clientPaidDelivery ?? 0) ?></h6>
+          </div>
+          <div class="w-50-px h-50-px bg-success-main rounded-circle d-flex justify-content-center align-items-center">
+            <i class="ri-coupon-3-line text-white text-2xl mb-0"></i>
+          </div>
+        </div>
+        <p class="fw-medium text-sm text-primary-light mt-12 mb-0 d-flex align-items-center gap-2">
+          <span class="d-inline-flex align-items-center gap-1 text-success-main">
+            <i class="ri-arrow-right-up-line text-xs"></i> <?= htmlspecialchars($pct((float)($clientPaidDelivery ?? 0))) ?>
+          </span>
+          <?= htmlspecialchars($t->t('bugungi.card.of_total_profit', 'ulushi')) ?>
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="row g-3">
   <div class="col-12">
     <h2 class="h6 mb-2"><?= htmlspecialchars($t->t('bugungi.section.profit', '1) Foyda (buyurtmalar)')) ?></h2>
   </div>
-  <div class="col-6 col-lg-3">
-    <div class="card"><div class="card-body py-3">
-      <div class="text-muted small"><?= htmlspecialchars($t->t('bugungi.profit.total_orders', 'Jami buyurtma')) ?></div>
-      <div class="fs-5 fw-semibold"><?= num0($totalOrdersAll) ?></div>
-    </div></div>
-  </div>
-  <div class="col-6 col-lg-3">
-    <div class="card"><div class="card-body py-3">
-      <div class="text-muted small"><?= htmlspecialchars($t->t('bugungi.profit.total_sum', 'Jami summa')) ?></div>
-      <div class="fs-5 fw-semibold"><?= money($profitTotal) ?></div>
-      <div class="text-muted small"><?= $pct($profitTotal) ?></div>
-    </div></div>
-  </div>
-
-  <div class="col-6 col-lg-3">
-    <div class="card"><div class="card-body py-3">
-      <div class="text-muted small"><?= htmlspecialchars($t->t('bugungi.profit.net_profit', 'Chistaya foyda')) ?></div>
-      <div class="fs-5 fw-semibold"><?= money($netProfit) ?></div>
-      <div class="text-muted small"><?= $pct($netProfit) ?></div>
-    </div></div>
-  </div>
-  <div class="col-6 col-lg-3">
-    <div class="card"><div class="card-body py-3">
-      <div class="text-muted small"><?= htmlspecialchars($t->t('bugungi.profit.delivery_no_agg', 'Delivery (no agg)')) ?></div>
-      <div class="fs-5 fw-semibold"><?= num0($deliveryNoAgg['cnt'] ?? 0) ?></div>
-      <div class="text-muted small"><?= money($deliveryNoAgg['sum_final'] ?? 0) ?> (<?= $pct((float)($deliveryNoAgg['sum_final'] ?? 0)) ?>)</div>
-    </div></div>
-  </div>
-  <div class="col-6 col-lg-3">
-    <div class="card"><div class="card-body py-3">
-      <div class="text-muted small"><?= htmlspecialchars($t->t('bugungi.profit.pickup_no_agg', 'Pickup (no agg)')) ?></div>
-      <div class="fs-5 fw-semibold"><?= num0($pickupNoAgg['cnt'] ?? 0) ?></div>
-      <div class="text-muted small"><?= money($pickupNoAgg['sum_final'] ?? 0) ?> (<?= $pct((float)($pickupNoAgg['sum_final'] ?? 0)) ?>)</div>
-    </div></div>
+  <div class="col-12 col-xl-6">
+    <div class="card">
+      <div class="card-body">
+        <h3 class="h6 mb-3"><?= htmlspecialchars($t->t('bugungi.breakdown.profit', 'Foyda taqsimoti')) ?></h3>
+        <?php
+          $profitItems = [
+            ['label' => $t->t('bugungi.profit.delivery_no_agg', 'Delivery (no agg)'), 'value' => (float)($deliveryNoAgg['sum_final'] ?? 0), 'color' => 'bg-warning-main'],
+            ['label' => $t->t('bugungi.profit.pickup_no_agg', 'Pickup (no agg)'), 'value' => (float)($pickupNoAgg['sum_final'] ?? 0), 'color' => 'bg-info-main'],
+            ['label' => 'Yandex (net)', 'value' => (float)$yNet, 'color' => 'bg-danger-main'],
+            ['label' => 'Wolt (net)', 'value' => (float)$wNet, 'color' => 'bg-purple'],
+            ['label' => 'Uzum (net)', 'value' => (float)$uNet, 'color' => 'bg-success-main'],
+          ];
+        ?>
+        <div class="progress mb-3" style="height: 8px;">
+          <?php foreach ($profitItems as $it): ?>
+            <?php $w = ($profitTotal > 0) ? max(0.0, ((float)$it['value'] / $profitTotal) * 100.0) : 0.0; ?>
+            <div class="progress-bar <?= htmlspecialchars($it['color']) ?>" role="progressbar" style="width: <?= number_format($w, 2, '.', '') ?>%"></div>
+          <?php endforeach; ?>
+        </div>
+        <div class="d-flex flex-column gap-16">
+          <?php foreach ($profitItems as $it): ?>
+            <div class="d-flex justify-content-between align-items-center">
+              <div class="d-flex align-items-center gap-3">
+                <span class="w-12-px h-12-px rounded-circle <?= htmlspecialchars($it['color']) ?>"></span>
+                <span class="fw-medium"><?= htmlspecialchars((string)$it['label']) ?></span>
+              </div>
+              <div class="d-flex align-items-center gap-3">
+                <span class="fw-semibold"><?= money((float)$it['value']) ?></span>
+                <span class="text-secondary-light fw-semibold"><?= htmlspecialchars($pct((float)$it['value'])) ?></span>
+              </div>
+            </div>
+          <?php endforeach; ?>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div class="col-12">
@@ -169,6 +257,56 @@ $taxiDiff = $taxiGross - (float)$clientPaidDelivery;
 
   <div class="col-12">
     <h2 class="h6 mb-2"><?= htmlspecialchars($t->t('bugungi.section.expenses', '2) Xarajatlar')) ?></h2>
+  </div>
+  <div class="col-12 col-xl-6">
+    <div class="card">
+      <div class="card-body">
+        <h3 class="h6 mb-3"><?= htmlspecialchars($t->t('bugungi.breakdown.expenses', 'Xarajatlar taqsimoti')) ?></h3>
+        <?php
+          $errSum = (float)($err['sum'] ?? 0);
+          $expensePosTotal = max(0.0, (float)$salarySum + (float)$taxiGross + (float)$errSum);
+          $expenseItems = [
+            ['label' => $t->t('bugungi.expenses.salary', 'Ish haqi (jami)'), 'value' => (float)$salarySum, 'color' => 'bg-warning-main'],
+            ['label' => $t->t('bugungi.expenses.taxi_yandex', 'Taxi Yandex (jami)') . ' + ' . $t->t('bugungi.expenses.taxi_millennium', 'Taxi Millennium'), 'value' => (float)$taxiGross, 'color' => 'bg-info-main'],
+            ['label' => $t->t('bugungi.expenses.errors', 'Ko‘syaklar'), 'value' => (float)$errSum, 'color' => 'bg-danger-main'],
+          ];
+        ?>
+        <div class="progress mb-3" style="height: 8px;">
+          <?php foreach ($expenseItems as $it): ?>
+            <?php $w = ($expensePosTotal > 0) ? max(0.0, ((float)$it['value'] / $expensePosTotal) * 100.0) : 0.0; ?>
+            <div class="progress-bar <?= htmlspecialchars($it['color']) ?>" role="progressbar" style="width: <?= number_format($w, 2, '.', '') ?>%"></div>
+          <?php endforeach; ?>
+        </div>
+        <div class="d-flex flex-column gap-16">
+          <?php foreach ($expenseItems as $it): ?>
+            <div class="d-flex justify-content-between align-items-center">
+              <div class="d-flex align-items-center gap-3">
+                <span class="w-12-px h-12-px rounded-circle <?= htmlspecialchars($it['color']) ?>"></span>
+                <span class="fw-medium"><?= htmlspecialchars((string)$it['label']) ?></span>
+              </div>
+              <div class="d-flex align-items-center gap-3">
+                <span class="fw-semibold"><?= money((float)$it['value']) ?></span>
+                <span class="text-secondary-light fw-semibold"><?= htmlspecialchars(($expensePosTotal > 0) ? number_format(((float)$it['value'] / $expensePosTotal) * 100.0, 0, '.', '') . '%' : '0%') ?></span>
+              </div>
+            </div>
+          <?php endforeach; ?>
+          <div class="d-flex justify-content-between align-items-center pt-2 border-top">
+            <div class="d-flex align-items-center gap-3">
+              <span class="w-12-px h-12-px rounded-circle bg-success-main"></span>
+              <span class="fw-medium"><?= htmlspecialchars($t->t('bugungi.expenses.client_paid', 'Zaplatil klient')) ?> (−)</span>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+              <span class="fw-semibold"><?= money((float)($clientPaidDelivery ?? 0)) ?></span>
+              <span class="text-secondary-light fw-semibold"><?= htmlspecialchars($pct((float)($clientPaidDelivery ?? 0))) ?></span>
+            </div>
+          </div>
+          <div class="d-flex justify-content-between align-items-center">
+            <div class="fw-semibold"><?= htmlspecialchars($t->t('bugungi.expenses.total', 'Jami xarajat')) ?></div>
+            <div class="fw-semibold"><?= money($expensesTotal) ?> <span class="text-secondary-light fw-semibold">(<?= htmlspecialchars($pct((float)$expensesTotal)) ?>)</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
   <div class="col-12 col-lg-4">
     <div class="card"><div class="card-body py-3">
