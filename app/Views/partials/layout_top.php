@@ -5,47 +5,143 @@ $locale = $_SESSION['locale'] ?? 'uz';
 if (!in_array($locale, ['uz', 'ru'], true)) $locale = 'uz';
 ?>
 <!doctype html>
-<html lang="<?= htmlspecialchars($locale) ?>">
+<html lang="<?= htmlspecialchars($locale) ?>" data-theme="light">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title><?= htmlspecialchars($t->t('app.title')) ?></title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="icon" type="image/png" href="assets/wowdash/images/favicon.png" sizes="16x16">
+  <link rel="stylesheet" href="assets/wowdash/css/remixicon.css">
+  <link rel="stylesheet" href="assets/wowdash/css/lib/bootstrap.min.css">
+  <link rel="stylesheet" href="assets/wowdash/css/style.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
-<body class="bg-light">
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-  <div class="container-fluid">
-    <a class="navbar-brand" href="?page=dashboard"><?= htmlspecialchars($t->t('app.title')) ?></a>
-    <div class="collapse navbar-collapse show">
-      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-        <li class="nav-item"><a class="nav-link" href="?page=dashboard"><?= htmlspecialchars($t->t('nav.dashboard')) ?></a></li>
-        <li class="nav-item"><a class="nav-link" href="?page=bugungi"><?= htmlspecialchars($t->t('nav.bugungi', 'Bugungi')) ?></a></li>
-        <li class="nav-item"><a class="nav-link" href="?page=smartomato"><?= htmlspecialchars($t->t('nav.smartomato')) ?></a></li>
-        <li class="nav-item"><a class="nav-link" href="?page=others"><?= htmlspecialchars($t->t('nav.others', 'Boshqalar')) ?></a></li>
-        <li class="nav-item"><a class="nav-link" href="?page=taxi"><?= htmlspecialchars($t->t('nav.taxi', 'Taxi')) ?></a></li>
-        <li class="nav-item"><a class="nav-link" href="?page=errors"><?= htmlspecialchars($t->t('nav.errors', 'Xatolar')) ?></a></li>
-        <li class="nav-item"><a class="nav-link" href="?page=operator_sales"><?= htmlspecialchars($t->t('nav.operator_sales', 'Operator savdo')) ?></a></li>
-        <li class="nav-item"><a class="nav-link" href="?page=operators"><?= htmlspecialchars($t->t('nav.operators')) ?></a></li>
-        <?php if (($auth->role() ?? '') === 'admin'): ?>
-          <li class="nav-item"><a class="nav-link" href="?page=settings"><?= htmlspecialchars($t->t('nav.settings')) ?></a></li>
-        <?php endif; ?>
-      </ul>
-      <div class="d-flex">
-        <div class="dropdown me-2">
-          <button class="btn btn-outline-light btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-            <?= htmlspecialchars(strtoupper($locale)) ?>
+<body>
+<div class="body-overlay"></div>
+
+<aside class="sidebar">
+  <button type="button" class="sidebar-close-btn">
+    <iconify-icon icon="radix-icons:cross-2"></iconify-icon>
+  </button>
+  <div>
+    <a href="?page=dashboard" class="sidebar-logo">
+      <span class="fw-bold text-primary-600"><?= htmlspecialchars($t->t('app.title')) ?></span>
+    </a>
+  </div>
+  <div class="sidebar-menu-area">
+    <ul class="sidebar-menu" id="sidebar-menu">
+      <li>
+        <a href="?page=dashboard">
+          <iconify-icon icon="solar:chart-2-outline" class="menu-icon"></iconify-icon>
+          <span><?= htmlspecialchars($t->t('nav.dashboard')) ?></span>
+        </a>
+      </li>
+      <li>
+        <a href="?page=bugungi">
+          <iconify-icon icon="solar:calendar-date-outline" class="menu-icon"></iconify-icon>
+          <span><?= htmlspecialchars($t->t('nav.bugungi', 'Bugungi')) ?></span>
+        </a>
+      </li>
+      <li>
+        <a href="?page=smartomato">
+          <iconify-icon icon="solar:cloud-download-outline" class="menu-icon"></iconify-icon>
+          <span><?= htmlspecialchars($t->t('nav.smartomato')) ?></span>
+        </a>
+      </li>
+      <li>
+        <a href="?page=others">
+          <iconify-icon icon="solar:layers-outline" class="menu-icon"></iconify-icon>
+          <span><?= htmlspecialchars($t->t('nav.others', 'Boshqalar')) ?></span>
+        </a>
+      </li>
+      <li>
+        <a href="?page=taxi">
+          <iconify-icon icon="solar:car-outline" class="menu-icon"></iconify-icon>
+          <span><?= htmlspecialchars($t->t('nav.taxi', 'Taxi')) ?></span>
+        </a>
+      </li>
+      <li>
+        <a href="?page=errors">
+          <iconify-icon icon="solar:shield-warning-outline" class="menu-icon"></iconify-icon>
+          <span><?= htmlspecialchars($t->t('nav.errors', 'Xatolar')) ?></span>
+        </a>
+      </li>
+      <li>
+        <a href="?page=operator_sales">
+          <iconify-icon icon="solar:users-group-rounded-outline" class="menu-icon"></iconify-icon>
+          <span><?= htmlspecialchars($t->t('nav.operator_sales', 'Operator savdo')) ?></span>
+        </a>
+      </li>
+      <li>
+        <a href="?page=operators">
+          <iconify-icon icon="solar:user-id-outline" class="menu-icon"></iconify-icon>
+          <span><?= htmlspecialchars($t->t('nav.operators')) ?></span>
+        </a>
+      </li>
+      <?php if (($auth->role() ?? '') === 'admin'): ?>
+        <li>
+          <a href="?page=settings">
+            <iconify-icon icon="solar:settings-outline" class="menu-icon"></iconify-icon>
+            <span><?= htmlspecialchars($t->t('nav.settings')) ?></span>
+          </a>
+        </li>
+      <?php endif; ?>
+    </ul>
+  </div>
+</aside>
+
+<main class="dashboard-main">
+  <div class="navbar-header">
+    <div class="row align-items-center justify-content-between">
+      <div class="col-auto">
+        <div class="d-flex flex-wrap align-items-center gap-4">
+          <button type="button" class="sidebar-toggle">
+            <iconify-icon icon="heroicons:bars-3-solid" class="icon text-2xl non-active"></iconify-icon>
+            <iconify-icon icon="iconoir:arrow-right" class="icon text-2xl active"></iconify-icon>
           </button>
-          <ul class="dropdown-menu dropdown-menu-end">
-            <li><a class="dropdown-item" href="?<?= htmlspecialchars(http_build_query(array_merge($_GET, ['lang' => 'uz']))) ?>"><?= htmlspecialchars($t->t('lang.uz', 'O‘zbekcha')) ?></a></li>
-            <li><a class="dropdown-item" href="?<?= htmlspecialchars(http_build_query(array_merge($_GET, ['lang' => 'ru']))) ?>"><?= htmlspecialchars($t->t('lang.ru', 'Русский')) ?></a></li>
-          </ul>
+          <button type="button" class="sidebar-mobile-toggle">
+            <iconify-icon icon="heroicons:bars-3-solid" class="icon"></iconify-icon>
+          </button>
         </div>
-        <a class="btn btn-outline-light btn-sm me-2" href="?page=profile"><?= htmlspecialchars($t->t('nav.profile', 'Profil')) ?></a>
-        <a class="btn btn-outline-light btn-sm" href="?page=logout"><?= htmlspecialchars($t->t('nav.logout')) ?></a>
+      </div>
+      <div class="col-auto">
+        <div class="d-flex flex-wrap align-items-center gap-3">
+          <div class="dropdown d-inline-block">
+            <button class="w-40-px h-40-px bg-neutral-200 rounded-circle d-flex justify-content-center align-items-center"
+                    type="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <span class="text-sm fw-semibold"><?= htmlspecialchars(strtoupper($locale)) ?></span>
+            </button>
+            <div class="dropdown-menu to-top dropdown-menu-sm">
+              <div class="py-12 px-16 radius-8 bg-primary-50 mb-16">
+                <h6 class="text-lg text-primary-light fw-semibold mb-0"><?= htmlspecialchars($t->t('lang.ru', 'Русский')) ?> / <?= htmlspecialchars($t->t('lang.uz', 'O‘zbekcha')) ?></h6>
+              </div>
+              <div class="px-16 pb-12">
+                <a class="dropdown-item px-0 py-8 d-flex align-items-center gap-3"
+                   href="?<?= htmlspecialchars(http_build_query(array_merge($_GET, ['lang' => 'uz']))) ?>">
+                  <span class="text-md fw-semibold mb-0"><?= htmlspecialchars($t->t('lang.uz', 'O‘zbekcha')) ?></span>
+                </a>
+                <a class="dropdown-item px-0 py-8 d-flex align-items-center gap-3"
+                   href="?<?= htmlspecialchars(http_build_query(array_merge($_GET, ['lang' => 'ru']))) ?>">
+                  <span class="text-md fw-semibold mb-0"><?= htmlspecialchars($t->t('lang.ru', 'Русский')) ?></span>
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <a class="w-40-px h-40-px bg-neutral-200 rounded-circle d-flex justify-content-center align-items-center text-neutral-900"
+             href="?page=profile" title="<?= htmlspecialchars($t->t('nav.profile', 'Profil')) ?>">
+            <iconify-icon icon="solar:user-circle-outline" class="icon"></iconify-icon>
+          </a>
+
+          <a class="w-40-px h-40-px bg-neutral-200 rounded-circle d-flex justify-content-center align-items-center text-neutral-900"
+             href="?page=logout" title="<?= htmlspecialchars($t->t('nav.logout')) ?>">
+            <iconify-icon icon="lucide:power" class="icon"></iconify-icon>
+          </a>
+        </div>
       </div>
     </div>
   </div>
-</nav>
-<main class="container py-4">
+
+  <div class="dashboard-main-body">
+    <div class="container-fluid py-3">
 

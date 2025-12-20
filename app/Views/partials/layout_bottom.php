@@ -1,8 +1,13 @@
 <?php
 /** @var \App\I18n $t */
 ?>
+</div>
+</div>
 </main>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="assets/wowdash/js/lib/jquery-3.7.1.min.js"></script>
+<script src="assets/wowdash/js/lib/bootstrap.bundle.min.js"></script>
+<script src="assets/wowdash/js/lib/iconify-icon.min.js"></script>
+<script src="assets/wowdash/js/app.js"></script>
 </body>
 </html>
 
