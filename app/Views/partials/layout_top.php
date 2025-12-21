@@ -161,6 +161,65 @@ if (!in_array($locale, ['uz', 'ru'], true)) $locale = 'uz';
           let scheduled = false;
           const originals = new Map(); // TextNode -> original string
 
+          function updateChartsForMask(enabled) {
+            try {
+              if (!window.Chart) return;
+              const charts = [];
+              if (window.Chart.instances) {
+                for (const k in window.Chart.instances) {
+                  if (window.Chart.instances[k]) charts.push(window.Chart.instances[k]);
+                }
+              } else if (typeof window.Chart.getChart === 'function') {
+                document.querySelectorAll('canvas').forEach((c) => {
+                  const ch = window.Chart.getChart(c);
+                  if (ch) charts.push(ch);
+                });
+              }
+
+              charts.forEach((chart) => {
+                if (!chart || !chart.options) return;
+                // Save original options once
+                if (!chart.$maskOrig) {
+                  chart.$maskOrig = {
+                    tooltipEnabled: chart.options.plugins?.tooltip?.enabled,
+                    scales: {},
+                  };
+                  const scales = chart.options.scales || {};
+                  Object.keys(scales).forEach((sid) => {
+                    chart.$maskOrig.scales[sid] = {
+                      ticksDisplay: scales[sid]?.ticks?.display,
+                      ticksCallback: scales[sid]?.ticks?.callback,
+                    };
+                  });
+                }
+
+                // Tooltip
+                chart.options.plugins = chart.options.plugins || {};
+                chart.options.plugins.tooltip = chart.options.plugins.tooltip || {};
+                chart.options.plugins.tooltip.enabled = enabled ? false : (chart.$maskOrig.tooltipEnabled ?? true);
+
+                // Axis ticks
+                chart.options.scales = chart.options.scales || {};
+                Object.keys(chart.options.scales).forEach((sid) => {
+                  const sc = chart.options.scales[sid] || {};
+                  sc.ticks = sc.ticks || {};
+                  const orig = chart.$maskOrig.scales[sid] || {};
+                  if (enabled) {
+                    sc.ticks.display = false; // hide numbers but keep grid/line shape
+                  } else {
+                    sc.ticks.display = orig.ticksDisplay;
+                    sc.ticks.callback = orig.ticksCallback;
+                  }
+                  chart.options.scales[sid] = sc;
+                });
+
+                chart.update('none');
+              });
+            } catch (e) {
+              // ignore
+            }
+          }
+
           function hasSkippedAncestor(node) {
             let el = node && node.parentElement;
             while (el) {
@@ -212,6 +271,7 @@ if (!in_array($locale, ['uz', 'ru'], true)) $locale = 'uz';
                 if (!originals.has(node)) originals.set(node, node.nodeValue);
                 node.nodeValue = maskText(node.nodeValue);
               });
+              updateChartsForMask(true);
             } finally {
               applying = false;
             }
@@ -225,6 +285,7 @@ if (!in_array($locale, ['uz', 'ru'], true)) $locale = 'uz';
               }
               node.nodeValue = orig;
             }
+            updateChartsForMask(false);
           }
 
           function setEnabled(enabled) {
