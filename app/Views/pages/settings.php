@@ -101,6 +101,20 @@ require __DIR__ . '/../partials/layout_top.php';
         </div>
       </div>
 
+      <h2 class="h6 mt-4"><?= htmlspecialchars($t->t('settings.section.telegram_alerts', 'Telegram (kuzatuv / xatolar)')) ?></h2>
+      <div class="row g-3">
+        <div class="col-12 col-lg-6">
+          <label class="form-label"><?= htmlspecialchars($t->t('settings.telegram_alerts.token', 'Alert bot token')) ?></label>
+          <input class="form-control" name="telegram_alert_bot_token" value="<?= htmlspecialchars((string)($smartomato['telegram_alert_bot_token'] ?? '')) ?>">
+          <div class="form-text"><?= htmlspecialchars($t->t('settings.telegram_alerts.hint', 'Bu bot saytga kirishlar va xatolar haqida guruhga xabar yuboradi.')) ?></div>
+        </div>
+        <div class="col-12 col-lg-6">
+          <label class="form-label"><?= htmlspecialchars($t->t('settings.telegram_alerts.chat_id', 'Alert group chat_id')) ?></label>
+          <input class="form-control" name="telegram_alert_chat_id" value="<?= htmlspecialchars((string)($smartomato['telegram_alert_chat_id'] ?? '')) ?>">
+          <div class="form-text"><?= htmlspecialchars($t->t('settings.telegram.chat_id_hint', 'Masalan: -1001234567890')) ?></div>
+        </div>
+      </div>
+
       <div class="mt-3">
         <button class="btn btn-primary" type="submit"><?= htmlspecialchars($t->t('common.save', 'Saqlash')) ?></button>
       </div>

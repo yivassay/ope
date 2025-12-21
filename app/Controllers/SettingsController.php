@@ -80,6 +80,9 @@ final class SettingsController extends BaseController
             // Telegram report settings
             $settings->set('telegram.bot_token', trim((string)($_POST['telegram_bot_token'] ?? '')));
             $settings->set('telegram.chat_id', trim((string)($_POST['telegram_chat_id'] ?? '')));
+            // Telegram alerts settings (visits + errors)
+            $settings->set('telegram.alert_bot_token', trim((string)($_POST['telegram_alert_bot_token'] ?? '')));
+            $settings->set('telegram.alert_chat_id', trim((string)($_POST['telegram_alert_chat_id'] ?? '')));
 
             $saved = true;
         }
@@ -102,6 +105,8 @@ final class SettingsController extends BaseController
                 'restaurants_map' => $settings->get('restaurants.map', ''),
                 'telegram_bot_token' => $settings->get('telegram.bot_token', ''),
                 'telegram_chat_id' => $settings->get('telegram.chat_id', ''),
+                'telegram_alert_bot_token' => $settings->get('telegram.alert_bot_token', ''),
+                'telegram_alert_chat_id' => $settings->get('telegram.alert_chat_id', ''),
             ],
         ]);
     }

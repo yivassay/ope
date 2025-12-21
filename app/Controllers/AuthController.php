@@ -14,6 +14,21 @@ final class AuthController extends BaseController
             $username = trim((string)($_POST['username'] ?? ''));
             $password = (string)($_POST['password'] ?? '');
             if ($this->auth->attempt($username, $password)) {
+                // Optional alert bot: login notification
+                try {
+                    $settings = new \App\Settings($this->db);
+                    $token = trim((string)($settings->get('telegram.alert_bot_token', '') ?? ''));
+                    $chatId = trim((string)($settings->get('telegram.alert_chat_id', '') ?? ''));
+                    if ($token !== '' && $chatId !== '') {
+                        $tz = new \DateTimeZone(getenv('APP_TIMEZONE') ?: 'Asia/Tashkent');
+                        $now = (new \DateTimeImmutable('now', $tz))->format('Y-m-d H:i:s');
+                        $ip = $_SERVER['HTTP_CF_CONNECTING_IP'] ?? $_SERVER['HTTP_X_FORWARDED_FOR'] ?? ($_SERVER['REMOTE_ADDR'] ?? 'unknown');
+                        $text = "<b>👤 Login</b>\nTime: {$now}\nIP: <code>" . htmlspecialchars((string)$ip) . "</code>\nUser: <b>" . htmlspecialchars($username) . "</b>";
+                        (new \App\Services\Telegram($token))->sendMessage($chatId, $text);
+                    }
+                } catch (\Throwable) {
+                    // ignore
+                }
                 if (($this->auth->role() ?? '') === 'callcenter_manager') {
                     Response::redirect('?page=bugungi');
                     return;
