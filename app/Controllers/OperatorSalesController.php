@@ -48,9 +48,9 @@ final class OperatorSalesController extends BaseController
             if (!in_array($roleMode, ['operator', 'logistic'], true)) {
                 $roleMode = 'operator';
             }
-            $salesSum = (float)($_POST['sales_sum'] ?? 0);
+            $salesSum = $this->parseMoney((string)($_POST['sales_sum'] ?? '0'));
             $orderCount = (int)($_POST['order_count'] ?? 0);
-            $manualSalary = (float)($_POST['manual_salary'] ?? 0);
+            $manualSalary = $this->parseMoney((string)($_POST['manual_salary'] ?? '0'));
             $note = trim((string)($_POST['note'] ?? ''));
 
             if ($roleMode === 'logistic') {

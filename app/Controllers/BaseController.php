@@ -28,5 +28,18 @@ abstract class BaseController
             't' => $this->i18n,
         ]);
     }
+
+    /**
+     * Parses money values from user input.
+     * Supports "10 000 000", "10 000 000", "10000000", "10,5" (comma decimals).
+     */
+    protected function parseMoney(string $v): float
+    {
+        $v = trim($v);
+        if ($v === '' || $v === '-') return 0.0;
+        $v = str_replace(["\xC2\xA0", ' '], '', $v); // NBSP and spaces
+        $v = str_replace(',', '.', $v);
+        return (float)$v;
+    }
 }
 

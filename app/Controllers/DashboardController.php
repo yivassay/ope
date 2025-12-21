@@ -161,6 +161,23 @@ final class DashboardController extends BaseController
             $millByDate = [];
         }
 
+        $courierByDate = [];
+        try {
+            $stmt = $this->db->prepare('
+                SELECT stat_date, COALESCE(SUM(sum_total),0) AS courier_sum
+                FROM courier_daily_stats
+                WHERE stat_date BETWEEN :s AND :e
+                GROUP BY stat_date
+                ORDER BY stat_date
+            ');
+            $stmt->execute(['s' => $from, 'e' => $to]);
+            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+                $courierByDate[(string)$r['stat_date']] = ['courier' => (float)($r['courier_sum'] ?? 0)];
+            }
+        } catch (\Throwable) {
+            $courierByDate = [];
+        }
+
         // Errors per day (amount)
         $errByDate = [];
         try {
@@ -297,6 +314,7 @@ final class DashboardController extends BaseController
             'salaryByDate' => $salaryByDate,
             'taxiByDate' => $taxiByDate,
             'millByDate' => $millByDate,
+            'courierByDate' => $courierByDate,
             'errByDate' => $errByDate,
             'aggByDate' => $aggByDate,
             'uzumByDate' => $uzumByDate,

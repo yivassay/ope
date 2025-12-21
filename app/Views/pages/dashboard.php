@@ -12,6 +12,7 @@
 /** @var array $salaryByDate */
 /** @var array $taxiByDate */
 /** @var array $millByDate */
+/** @var array $courierByDate */
 /** @var array $errByDate */
 /** @var array $aggByDate */
 /** @var array $uzumByDate */
@@ -47,7 +48,9 @@ foreach ($labels as $d) {
     $avgCheck[] = (float)$o['avg'];
 
     $salary[] = (float)(($salaryByDate[$d]['salary'] ?? 0));
-    $taxiSum = (float)(($taxiByDate[$d]['taxi'] ?? 0)) + (float)(($millByDate[$d]['mill'] ?? 0));
+    $taxiSum = (float)(($taxiByDate[$d]['taxi'] ?? 0))
+        + (float)(($millByDate[$d]['mill'] ?? 0))
+        + (float)(($courierByDate[$d]['courier'] ?? 0));
     $taxi[] = $taxiSum;
     $errors[] = (float)(($errByDate[$d]['errors'] ?? 0));
 

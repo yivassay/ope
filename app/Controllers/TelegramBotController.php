@@ -20,7 +20,7 @@ final class TelegramBotController extends BaseController
 
         if (($_GET['action'] ?? '') === 'save' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $orderCount = (int)($_POST['order_count'] ?? 0);
-            $sumFinal = (float)($_POST['sum_final'] ?? 0);
+            $sumFinal = $this->parseMoney((string)($_POST['sum_final'] ?? '0'));
             $note = trim((string)($_POST['note'] ?? ''));
 
             $stmt = $this->db->prepare('INSERT INTO telegram_daily_stats (stat_date, order_count, sum_final, note, updated_by_user_id, updated_at)

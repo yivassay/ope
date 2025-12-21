@@ -167,6 +167,20 @@ CREATE TABLE IF NOT EXISTS millennium_taxi_daily_stats (
   KEY idx_millennium_taxi_restaurant (restaurant_name, stat_date)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Our couriers (manual input)
+CREATE TABLE IF NOT EXISTS courier_daily_stats (
+  stat_date DATE NOT NULL,
+  restaurant_name VARCHAR(190) NOT NULL,
+  trips_count INT UNSIGNED NOT NULL DEFAULT 0,
+  sum_total DECIMAL(14,2) NOT NULL DEFAULT 0,
+  note VARCHAR(255) NOT NULL DEFAULT '',
+  updated_by_user_id BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (stat_date, restaurant_name),
+  KEY idx_courier_date (stat_date),
+  KEY idx_courier_restaurant (restaurant_name, stat_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Delivery errors (manual)
 CREATE TABLE IF NOT EXISTS delivery_errors (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,

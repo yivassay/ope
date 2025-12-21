@@ -296,6 +296,22 @@ final class BugungiController extends BaseController
             $millSum = 0.0;
         }
 
+        // Our couriers (manual)
+        $courierSum = 0.0;
+        try {
+            if ($restaurantId > 0) {
+                $rName = $restaurants[(string)$restaurantId] ?? ('Restaurant ' . $restaurantId);
+                $stmt = $this->db->prepare('SELECT COALESCE(SUM(sum_total),0) AS s FROM courier_daily_stats WHERE stat_date=:d AND restaurant_name=:rn');
+                $stmt->execute(['d' => $date, 'rn' => $rName]);
+            } else {
+                $stmt = $this->db->prepare('SELECT COALESCE(SUM(sum_total),0) AS s FROM courier_daily_stats WHERE stat_date=:d');
+                $stmt->execute(['d' => $date]);
+            }
+            $courierSum = (float)($stmt->fetch(PDO::FETCH_ASSOC)['s'] ?? 0);
+        } catch (Throwable) {
+            $courierSum = 0.0;
+        }
+
         // Errors (day)
         $err = ['cnt' => 0, 'sum' => 0.0];
         try {
@@ -421,6 +437,7 @@ final class BugungiController extends BaseController
                 $expensesTotal = (float)$salarySum
                     + (float)($taxi['sum_total'] ?? 0)
                     + (float)$millSum
+                    + (float)$courierSum
                     + (float)($err['sum'] ?? 0)
                     - (float)$clientPaidDelivery;
 
@@ -448,6 +465,7 @@ final class BugungiController extends BaseController
                 $lines[] = "- Ish haqi: {$money((float)$salarySum)}";
                 $lines[] = "- Yandex taxi: {$money((float)($taxi['sum_total'] ?? 0))}";
                 $lines[] = "- Millennium: {$money((float)$millSum)}";
+                $lines[] = "- Bizning kuryerlar: {$money((float)$courierSum)}";
                 $lines[] = "- Opłatıl klient: {$money((float)$clientPaidDelivery)}";
                 $lines[] = "- Farq (Yandex+Millennium − Opłatıl klient): <b>{$money($taxiDiff)}</b>";
                 if ((int)($err['cnt'] ?? 0) > 0) {
@@ -530,6 +548,7 @@ final class BugungiController extends BaseController
             'waitingByRestaurant' => $waitingByRestaurant,
             'taxiRoundtrip' => $taxiRoundtrip,
             'millSum' => $millSum,
+            'courierSum' => $courierSum,
             'err' => $err,
             'byChannel' => $byChannel,
             'telegram' => $telegram,

@@ -13,6 +13,7 @@
 /** @var float $salarySum */
 /** @var array $taxi */
 /** @var float $millSum */
+/** @var float $courierSum */
 /** @var array $err */
 /** @var array $byChannel */
 /** @var array $telegram */
@@ -76,6 +77,7 @@ $pctExpense = static function (float $v) use ($expenseBase): string {
 $expensesTotal = (float)$salarySum
     + (float)($taxi['sum_total'] ?? 0)
     + (float)$millSum
+    + (float)$courierSum
     + (float)($err['sum'] ?? 0)
     - (float)$clientPaidDelivery;
 
@@ -278,10 +280,11 @@ $taxiDiff = $taxiGross - (float)$clientPaidDelivery;
         <h3 class="h6 mb-3"><?= htmlspecialchars($t->t('bugungi.breakdown.expenses', 'Xarajatlar taqsimoti')) ?></h3>
         <?php
           $errSum = (float)($err['sum'] ?? 0);
-          $expensePosTotal = max(0.0, (float)$salarySum + (float)$taxiGross + (float)$errSum);
+          $expensePosTotal = max(0.0, (float)$salarySum + (float)$taxiGross + (float)$courierSum + (float)$errSum);
           $expenseItems = [
             ['label' => $t->t('bugungi.expenses.salary', 'Ish haqi (jami)'), 'value' => (float)$salarySum, 'color' => 'bg-warning-main'],
             ['label' => $t->t('bugungi.expenses.taxi_yandex', 'Taxi Yandex (jami)') . ' + ' . $t->t('bugungi.expenses.taxi_millennium', 'Taxi Millennium'), 'value' => (float)$taxiGross, 'color' => 'bg-info-main'],
+            ['label' => $t->t('taxi.couriers.title', 'Our couriers'), 'value' => (float)$courierSum, 'color' => 'bg-purple'],
             ['label' => $t->t('bugungi.expenses.errors', 'Ko‘syaklar'), 'value' => (float)$errSum, 'color' => 'bg-danger-main'],
           ];
         ?>
@@ -354,6 +357,13 @@ $taxiDiff = $taxiGross - (float)$clientPaidDelivery;
       <div class="text-muted small"><?= htmlspecialchars($t->t('bugungi.expenses.taxi_millennium', 'Taxi Millennium')) ?></div>
       <div class="fs-5 fw-semibold"><?= money($millSum) ?></div>
       <div class="text-muted small"><?= $pctExpense((float)$millSum) ?></div>
+    </div></div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card"><div class="card-body py-3">
+      <div class="text-muted small"><?= htmlspecialchars($t->t('taxi.couriers.title', 'Our couriers')) ?></div>
+      <div class="fs-5 fw-semibold"><?= money($courierSum) ?></div>
+      <div class="text-muted small"><?= $pctExpense((float)$courierSum) ?></div>
     </div></div>
   </div>
   <div class="col-6 col-lg-3">

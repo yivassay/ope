@@ -150,6 +150,9 @@ return [
     'taxi.millennium.no_options' => 'Если список пуст: Настройки → Taxi mapping.',
     'taxi.millennium.trips_count' => 'Кол-во поездок',
     'taxi.millennium.empty' => 'Пока данных нет.',
+    'taxi.couriers.title' => 'Наши курьеры',
+    'taxi.couriers.trips_count' => 'Кол-во поездок',
+    'taxi.couriers.empty' => 'Пока данных нет.',
     'taxi.duplicate_by_restaurant' => 'Дубли (по ресторанам)',
 
     'taxi.err.no_restaurant' => 'Ресторан не выбран',

@@ -21,7 +21,7 @@ final class OthersController extends BaseController
         if (($_GET['action'] ?? '') === 'save' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $kind = (string)($_POST['kind'] ?? '');
             $orderCount = (int)($_POST['order_count'] ?? 0);
-            $sumFinal = (float)($_POST['sum_final'] ?? 0);
+            $sumFinal = $this->parseMoney((string)($_POST['sum_final'] ?? '0'));
             $note = trim((string)($_POST['note'] ?? ''));
 
             if ($kind === 'telegram') {

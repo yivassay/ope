@@ -150,6 +150,9 @@ return [
     'taxi.millennium.no_options' => 'Agar drop-down bo‘sh bo‘lsa: Settings → Taxi mapping ni kiriting.',
     'taxi.millennium.trips_count' => "Po‘ezdka soni",
     'taxi.millennium.empty' => "Hozircha ma'lumot yo‘q.",
+    'taxi.couriers.title' => "Bizning kuryerlar",
+    'taxi.couriers.trips_count' => "Po‘ezdka soni",
+    'taxi.couriers.empty' => "Hozircha ma'lumot yo‘q.",
     'taxi.duplicate_by_restaurant' => 'Ikki marta jonatilgan (restaurant)',
 
     'taxi.err.no_restaurant' => 'Restaurant tanlanmagan',

@@ -60,6 +60,35 @@ final class TaxiController extends BaseController
             }
         }
 
+        if (($_GET['action'] ?? '') === 'courier_save' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+            $restaurant = trim((string)($_POST['restaurant_name'] ?? ''));
+            $tripsCount = (int)($_POST['trips_count'] ?? 0);
+            $sumTotal = $this->parseMoney((string)($_POST['sum_total'] ?? '0'));
+            $note = trim((string)($_POST['note'] ?? ''));
+
+            if ($restaurant === '') {
+                $error = $this->i18n->t('taxi.err.no_restaurant', 'Restaurant tanlanmagan');
+            } else {
+                try {
+                    $stmt = $this->db->prepare('INSERT INTO courier_daily_stats (stat_date, restaurant_name, trips_count, sum_total, note, updated_by_user_id, updated_at)
+                        VALUES (:d,:rn,:c,:s,:n,:u,NOW())
+                        ON DUPLICATE KEY UPDATE trips_count=VALUES(trips_count), sum_total=VALUES(sum_total), note=VALUES(note), updated_by_user_id=VALUES(updated_by_user_id), updated_at=NOW()');
+                    $stmt->execute([
+                        'd' => $date,
+                        'rn' => $restaurant,
+                        'c' => $tripsCount,
+                        's' => $sumTotal,
+                        'n' => $note,
+                        'u' => (int)($this->auth->id() ?? 0),
+                    ]);
+                    Response::redirect('?page=taxi&date=' . urlencode($date));
+                    return;
+                } catch (Throwable $e) {
+                    $error = $e->getMessage();
+                }
+            }
+        }
+
         if (($_GET['action'] ?? '') === 'upload' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!isset($_FILES['file']) || !is_array($_FILES['file'])) {
                 $error = $this->i18n->t('taxi.err.no_file', 'Fayl topilmadi');
@@ -331,6 +360,15 @@ final class TaxiController extends BaseController
             $mill = [];
         }
 
+        $couriers = [];
+        try {
+            $stmt = $this->db->prepare('SELECT * FROM courier_daily_stats WHERE stat_date = :d ORDER BY restaurant_name');
+            $stmt->execute(['d' => $date]);
+            $couriers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Throwable) {
+            $couriers = [];
+        }
+
         $this->render('pages/taxi', [
             'date' => $date,
             'message' => $message,
@@ -341,6 +379,7 @@ final class TaxiController extends BaseController
             'mappingRaw' => $mappingRaw,
             'restaurantOptions' => $restaurantOptions,
             'millennium' => $mill,
+            'couriers' => $couriers,
         ]);
     }
 

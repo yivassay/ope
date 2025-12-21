@@ -10,6 +10,7 @@
 /** @var string $mappingRaw */
 /** @var array $restaurantOptions */
 /** @var array $millennium */
+/** @var array $couriers */
 require __DIR__ . '/../partials/layout_top.php';
 
 $totalTrips = 0;
@@ -34,6 +35,13 @@ $millSum = 0.0;
 foreach ($millennium as $m) {
     $millTrips += (int)($m['trips_count'] ?? 0);
     $millSum += (float)($m['sum_total'] ?? 0);
+}
+
+$courTrips = 0;
+$courSum = 0.0;
+foreach ($couriers as $c) {
+    $courTrips += (int)($c['trips_count'] ?? 0);
+    $courSum += (float)($c['sum_total'] ?? 0);
 }
 ?>
 
@@ -94,6 +102,7 @@ foreach ($millennium as $m) {
         <div class="text-muted small"><?= htmlspecialchars($t->t('taxi.card.trips', "Po‘ezdka (count)")) ?></div>
         <div class="fs-5 fw-semibold"><?= number_format($totalTrips, 0, '.', ' ') ?></div>
         <div class="text-muted small"><?= htmlspecialchars($t->t('taxi.card.plus_millennium', '(+ Millennium)')) ?>: <?= number_format($millTrips, 0, '.', ' ') ?></div>
+        <div class="text-muted small"><?= htmlspecialchars($t->t('taxi.couriers.title', 'Our couriers')) ?>: <?= number_format($courTrips, 0, '.', ' ') ?></div>
       </div>
     </div>
   </div>
@@ -101,8 +110,8 @@ foreach ($millennium as $m) {
     <div class="card">
       <div class="card-body py-3">
         <div class="text-muted small"><?= htmlspecialchars($t->t('taxi.card.sum_total', 'Summa (jami)')) ?></div>
-        <div class="fs-5 fw-semibold"><?= number_format($totalSum + $totalPaidCancelSum + $totalReturnedSum + $millSum, 2, '.', ' ') ?></div>
-        <div class="text-muted small"><?= htmlspecialchars($t->t('taxi.card.sum_total_hint', '(+ paid cancel + returned + Millennium)')) ?></div>
+        <div class="fs-5 fw-semibold"><?= number_format($totalSum + $totalPaidCancelSum + $totalReturnedSum + $millSum + $courSum, 2, '.', ' ') ?></div>
+        <div class="text-muted small"><?= htmlspecialchars($t->t('taxi.card.sum_total_hint', '(+ paid cancel + returned + Millennium)')) ?> + <?= htmlspecialchars($t->t('taxi.couriers.title', 'Our couriers')) ?></div>
       </div>
     </div>
   </div>
@@ -249,6 +258,66 @@ foreach ($millennium as $m) {
             <?php endforeach; ?>
             <?php if (!$millennium): ?>
               <tr><td colspan="4" class="text-muted"><?= htmlspecialchars($t->t('taxi.millennium.empty', "Hozircha ma'lumot yo‘q.")) ?></td></tr>
+            <?php endif; ?>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-6">
+    <div class="card">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <h2 class="h6 mb-0"><?= htmlspecialchars($t->t('taxi.couriers.title', "Our couriers")) ?></h2>
+        </div>
+        <form method="post" action="?page=taxi&action=courier_save&date=<?= urlencode($date) ?>" class="row g-2 mt-2">
+          <div class="col-12">
+            <label class="form-label"><?= htmlspecialchars($t->t('common.restaurant', 'Restaurant')) ?></label>
+            <?php if ($restaurantOptions): ?>
+              <select class="form-select" name="restaurant_name" required>
+                <option value=""><?= htmlspecialchars($t->t('common.select', 'Tanlang')) ?></option>
+                <?php foreach ($restaurantOptions as $r): ?>
+                  <option value="<?= htmlspecialchars($r) ?>"><?= htmlspecialchars($r) ?></option>
+                <?php endforeach; ?>
+              </select>
+            <?php else: ?>
+              <input class="form-control" name="restaurant_name" placeholder="<?= htmlspecialchars($t->t('errors.restaurant_name', 'Restaurant nomi')) ?>" required>
+            <?php endif; ?>
+          </div>
+          <div class="col-6">
+            <label class="form-label"><?= htmlspecialchars($t->t('taxi.couriers.trips_count', "Po‘ezdka soni")) ?></label>
+            <input class="form-control" name="trips_count" value="0" required>
+          </div>
+          <div class="col-6">
+            <label class="form-label"><?= htmlspecialchars($t->t('common.sum', 'Summa')) ?></label>
+            <input class="form-control" name="sum_total" value="0" required>
+          </div>
+          <div class="col-12">
+            <label class="form-label"><?= htmlspecialchars($t->t('common.note', 'Izoh')) ?></label>
+            <input class="form-control" name="note" value="">
+          </div>
+          <div class="col-12">
+            <button class="btn btn-success" type="submit"><?= htmlspecialchars($t->t('common.save', 'Saqlash')) ?></button>
+          </div>
+        </form>
+
+        <hr>
+        <div class="table-responsive">
+          <table class="table table-sm mb-0">
+            <thead><tr><th><?= htmlspecialchars($t->t('common.restaurant', 'Restaurant')) ?></th><th class="text-end"><?= htmlspecialchars($t->t('common.count', 'Cnt')) ?></th><th class="text-end"><?= htmlspecialchars($t->t('common.sum', 'Summa')) ?></th><th><?= htmlspecialchars($t->t('common.note', 'Izoh')) ?></th></tr></thead>
+            <tbody>
+            <?php foreach ($couriers as $c): ?>
+              <tr>
+                <td><?= htmlspecialchars((string)$c['restaurant_name']) ?></td>
+                <td class="text-end"><?= number_format((int)($c['trips_count'] ?? 0), 0, '.', ' ') ?></td>
+                <td class="text-end"><?= number_format((float)($c['sum_total'] ?? 0), 2, '.', ' ') ?></td>
+                <td class="text-muted small"><?= htmlspecialchars((string)($c['note'] ?? '')) ?></td>
+              </tr>
+            <?php endforeach; ?>
+            <?php if (!$couriers): ?>
+              <tr><td colspan="4" class="text-muted"><?= htmlspecialchars($t->t('taxi.couriers.empty', "Hozircha ma'lumot yo‘q.")) ?></td></tr>
             <?php endif; ?>
             </tbody>
           </table>
