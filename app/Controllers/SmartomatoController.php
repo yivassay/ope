@@ -48,8 +48,9 @@ final class SmartomatoController extends BaseController
                 $perPage = (int)($settings->get('smartomato.per_page', '100') ?: 100);
 
                 $tz = new DateTimeZone(getenv('APP_TIMEZONE') ?: 'Asia/Tashkent');
-                $dayStart = new DateTimeImmutable($date . ' 00:00:00', $tz);
-                $dayEnd = $dayStart->modify('+1 day');
+                // Same window as SmartomatoAggregator: 09:00 -> next day 01:00
+                $dayStart = new DateTimeImmutable($date . ' 09:00:00', $tz);
+                $dayEnd = $dayStart->modify('+16 hours');
 
                 $client = new SmartomatoClient((string)$baseUrl, $login, $password, 60);
                 $token = $client->createSessionToken();

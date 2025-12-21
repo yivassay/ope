@@ -27,8 +27,10 @@ final class SmartomatoAggregator
             throw new RuntimeException('Invalid date format, expected YYYY-MM-DD');
         }
 
-        $dayStart = new DateTimeImmutable($targetDate . ' 00:00:00', $tz);
-        $dayEnd = $dayStart->modify('+1 day');
+        // Business day window (Tashkent): 09:00 of target date -> 01:00 of next date
+        // Example for 2025-12-20: [2025-12-20 09:00, 2025-12-21 01:00)
+        $dayStart = new DateTimeImmutable($targetDate . ' 09:00:00', $tz);
+        $dayEnd = $dayStart->modify('+16 hours'); // until next day 01:00
 
         $baseUrl = $this->settings->get('smartomato.base_url', 'https://smartomato.ru');
         $login = (string)$this->settings->get('smartomato.login', '');
