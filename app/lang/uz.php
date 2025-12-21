@@ -283,6 +283,8 @@ return [
     'smartomato.debug' => 'Debug: source / payment_source',
     'smartomato.debug_hint' => 'Bu yerda real qiymatlar chiqadi: source va payment_source qanday kelishini tekshiramiz.',
     'smartomato.debug_result' => 'Debug natija',
+    'smartomato.debug_total_sum' => 'Jami summa',
+    'smartomato.debug_window' => 'Vaqt oralig‘i',
     'smartomato.runs' => 'Oxirgi ishga tushirishlar',
     'smartomato.message' => 'Xabar',
     'smartomato.time' => 'Vaqt',

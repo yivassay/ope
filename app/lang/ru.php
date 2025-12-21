@@ -283,6 +283,8 @@ return [
     'smartomato.debug' => 'Debug: source / payment_source',
     'smartomato.debug_hint' => 'Показывает реальные значения source и payment_source.',
     'smartomato.debug_result' => 'Результат debug',
+    'smartomato.debug_total_sum' => 'Сумма',
+    'smartomato.debug_window' => 'Временное окно',
     'smartomato.runs' => 'Последние запуски',
     'smartomato.message' => 'Сообщение',
     'smartomato.time' => 'Время',

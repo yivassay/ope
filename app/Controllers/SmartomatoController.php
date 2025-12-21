@@ -62,6 +62,9 @@ final class SmartomatoController extends BaseController
                 $takeaway = ['pickup' => 0, 'delivery' => 0];
                 $examples = [];
                 $ordersSeen = 0;
+                $sumFinalTotal = 0.0;
+                $sourceSums = [];
+                $paymentSums = [];
 
                 $deliveryKeyCounts = [];
 
@@ -112,6 +115,11 @@ final class SmartomatoController extends BaseController
                         $isTakeaway = (bool)($o['takeaway'] ?? false);
                         $takeaway[$isTakeaway ? 'pickup' : 'delivery']++;
 
+                        $finalSum = (float)($o['final_sum'] ?? 0);
+                        $sumFinalTotal += $finalSum;
+                        $sourceSums[$src] = ($sourceSums[$src] ?? 0.0) + $finalSum;
+                        $paymentSums[$ps] = ($paymentSums[$ps] ?? 0.0) + $finalSum;
+
                         if (count($examples) < 5) {
                             $deliveryLike = $this->extractDeliveryLikeFields($o);
                             foreach (array_keys($deliveryLike) as $k) {
@@ -124,7 +132,7 @@ final class SmartomatoController extends BaseController
                                 'takeaway' => $isTakeaway ? 1 : 0,
                                 'source' => $src,
                                 'payment_source' => $ps,
-                                'final_sum' => (float)($o['final_sum'] ?? 0),
+                                'final_sum' => $finalSum,
                                 'payment_id' => $o['payment_id'] ?? null,
                                 'delivery_like' => $deliveryLike,
                             ];
@@ -157,12 +165,22 @@ final class SmartomatoController extends BaseController
 
                 arsort($sources);
                 arsort($payments);
+                arsort($sourceSums);
+                arsort($paymentSums);
 
                 $debug = [
                     'date' => $date,
                     'orders_seen' => $ordersSeen,
+                    'window' => [
+                        'start' => $dayStart->format('Y-m-d H:i:s'),
+                        'end' => $dayEnd->format('Y-m-d H:i:s'),
+                        'timezone' => $tz->getName(),
+                    ],
+                    'sum_final_total' => $sumFinalTotal,
                     'sources' => $sources,
+                    'sources_sum' => $sourceSums,
                     'payments' => $payments,
+                    'payments_sum' => $paymentSums,
                     'takeaway' => $takeaway,
                     'examples' => $examples,
                     'details' => $details,

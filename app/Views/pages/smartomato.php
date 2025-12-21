@@ -74,7 +74,19 @@ require __DIR__ . '/../partials/layout_top.php';
     <div class="col-12">
       <div class="card">
         <div class="card-body">
-          <h2 class="h6 mb-2"><?= htmlspecialchars($t->t('smartomato.debug_result', 'Debug natija')) ?>: <?= htmlspecialchars((string)$debug['date']) ?> (orders_seen=<?= (int)$debug['orders_seen'] ?>)</h2>
+          <h2 class="h6 mb-2">
+            <?= htmlspecialchars($t->t('smartomato.debug_result', 'Debug natija')) ?>:
+            <?= htmlspecialchars((string)$debug['date']) ?>
+            (orders_seen=<?= (int)$debug['orders_seen'] ?>,
+            <?= htmlspecialchars($t->t('smartomato.debug_total_sum', 'sum')) ?>=<?= number_format((float)($debug['sum_final_total'] ?? 0), 2, '.', ' ') ?>)
+          </h2>
+          <?php if (is_array($debug['window'] ?? null)): ?>
+            <div class="text-muted small mb-2">
+              <?= htmlspecialchars($t->t('smartomato.debug_window', 'Window')) ?>:
+              <?= htmlspecialchars((string)($debug['window']['start'] ?? '')) ?> → <?= htmlspecialchars((string)($debug['window']['end'] ?? '')) ?>
+              (<?= htmlspecialchars((string)($debug['window']['timezone'] ?? '')) ?>)
+            </div>
+          <?php endif; ?>
           <div class="row g-3">
             <div class="col-12 col-lg-4">
               <h3 class="h6">Delivery / Pickup</h3>
@@ -107,10 +119,14 @@ require __DIR__ . '/../partials/layout_top.php';
               <h3 class="h6">source (top)</h3>
               <div class="table-responsive">
                 <table class="table table-sm mb-0">
-                  <thead><tr><th>source</th><th class="text-end">cnt</th></tr></thead>
+                  <thead><tr><th>source</th><th class="text-end">cnt</th><th class="text-end">sum</th></tr></thead>
                   <tbody>
                   <?php foreach (($debug['sources'] ?? []) as $k => $v): ?>
-                    <tr><td><code><?= htmlspecialchars((string)$k) ?></code></td><td class="text-end"><?= (int)$v ?></td></tr>
+                    <tr>
+                      <td><code><?= htmlspecialchars((string)$k) ?></code></td>
+                      <td class="text-end"><?= (int)$v ?></td>
+                      <td class="text-end"><?= number_format((float)(($debug['sources_sum'] ?? [])[$k] ?? 0), 2, '.', ' ') ?></td>
+                    </tr>
                   <?php endforeach; ?>
                   </tbody>
                 </table>
@@ -120,10 +136,14 @@ require __DIR__ . '/../partials/layout_top.php';
               <h3 class="h6">payment_source (top)</h3>
               <div class="table-responsive">
                 <table class="table table-sm mb-0">
-                  <thead><tr><th>payment_source</th><th class="text-end">cnt</th></tr></thead>
+                  <thead><tr><th>payment_source</th><th class="text-end">cnt</th><th class="text-end">sum</th></tr></thead>
                   <tbody>
                   <?php foreach (($debug['payments'] ?? []) as $k => $v): ?>
-                    <tr><td><code><?= htmlspecialchars((string)$k) ?></code></td><td class="text-end"><?= (int)$v ?></td></tr>
+                    <tr>
+                      <td><code><?= htmlspecialchars((string)$k) ?></code></td>
+                      <td class="text-end"><?= (int)$v ?></td>
+                      <td class="text-end"><?= number_format((float)(($debug['payments_sum'] ?? [])[$k] ?? 0), 2, '.', ' ') ?></td>
+                    </tr>
                   <?php endforeach; ?>
                   </tbody>
                 </table>
