@@ -16,7 +16,8 @@ final class SmartomatoController extends BaseController
     public function index(): void
     {
         $tz = new DateTimeZone(getenv('APP_TIMEZONE') ?: 'Asia/Tashkent');
-        $yesterday = (new DateTimeImmutable('now', $tz))->modify('-1 day')->format('Y-m-d');
+        // Default date for UI: before 09:00 -> yesterday, otherwise today
+        $yesterday = $this->defaultUiDate($tz);
 
         $settings = new Settings($this->db);
 

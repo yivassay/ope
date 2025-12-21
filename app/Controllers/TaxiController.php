@@ -18,9 +18,9 @@ final class TaxiController extends BaseController
     public function index(): void
     {
         $tz = new DateTimeZone(getenv('APP_TIMEZONE') ?: 'Asia/Tashkent');
-        $date = (string)($_GET['date'] ?? (new DateTimeImmutable('now', $tz))->format('Y-m-d'));
+        $date = (string)($_GET['date'] ?? $this->defaultUiDate($tz));
         if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
-            $date = (new DateTimeImmutable('now', $tz))->format('Y-m-d');
+            $date = $this->defaultUiDate($tz);
         }
 
         $settings = new Settings($this->db);

@@ -17,7 +17,7 @@ final class DashboardController extends BaseController
         $settings = new Settings($this->db);
 
         $tz = new DateTimeZone(getenv('APP_TIMEZONE') ?: 'Asia/Tashkent');
-        $today = (new DateTimeImmutable('now', $tz))->format('Y-m-d');
+        $today = $this->defaultUiDate($tz);
         $period = (string)($_GET['period'] ?? 'week'); // week|month|year
         if (!in_array($period, ['week', 'month', 'year'], true)) {
             $period = 'week';

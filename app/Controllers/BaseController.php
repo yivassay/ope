@@ -41,5 +41,19 @@ abstract class BaseController
         $v = str_replace(',', '.', $v);
         return (float)$v;
     }
+
+    /**
+     * Default UI date for forms.
+     * Business rule: before 09:00 Tashkent time, default date is yesterday; otherwise today.
+     */
+    protected function defaultUiDate(\DateTimeZone $tz): string
+    {
+        $now = new \DateTimeImmutable('now', $tz);
+        $cutoff = new \DateTimeImmutable($now->format('Y-m-d') . ' 09:00:00', $tz);
+        if ($now < $cutoff) {
+            return $now->modify('-1 day')->format('Y-m-d');
+        }
+        return $now->format('Y-m-d');
+    }
 }
 
