@@ -24,21 +24,6 @@ if (isset($_GET['lang'])) {
     exit;
 }
 
-// Mask mode toggle (works for all pages)
-if (isset($_GET['mask'])) {
-    $mask = (string)$_GET['mask'];
-    if ($mask === '1') {
-        $_SESSION['mask_mode'] = true;
-    } elseif ($mask === '0') {
-        $_SESSION['mask_mode'] = false;
-    }
-    $params = $_GET;
-    unset($params['mask']);
-    $qs = http_build_query($params);
-    Response::redirect($qs ? ('?' . $qs) : '?page=dashboard');
-    exit;
-}
-
 // Public pages
 if ($page === 'login') {
     (new \App\Controllers\AuthController($db, $auth))->login();

@@ -15,8 +15,7 @@ if (!in_array($locale, ['uz', 'ru'], true)) $locale = 'uz';
   <link rel="stylesheet" href="assets/wowdash/css/style.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
-<?php $maskMode = !empty($_SESSION['mask_mode']); ?>
-<body data-mask="<?= $maskMode ? '1' : '0' ?>">
+<body>
 <div class="body-overlay"></div>
 
 <aside class="sidebar">
@@ -109,7 +108,8 @@ if (!in_array($locale, ['uz', 'ru'], true)) $locale = 'uz';
       <div class="col-auto">
         <div class="d-flex flex-wrap align-items-center gap-3">
           <a class="w-40-px h-40-px bg-neutral-200 rounded-circle d-flex justify-content-center align-items-center text-neutral-900"
-             href="?<?= htmlspecialchars(http_build_query(array_merge($_GET, ['mask' => $maskMode ? '0' : '1']))) ?>"
+             href="#"
+             id="maskToggle"
              title="<?= htmlspecialchars($t->t('mask.title', 'Mask')) ?>">
             <span class="fw-bold">*</span>
           </a>
@@ -152,24 +152,67 @@ if (!in_array($locale, ['uz', 'ru'], true)) $locale = 'uz';
 
   <div class="dashboard-main-body">
     <div class="container-fluid py-3">
-
       <script>
         (function () {
-          try {
-            const enabled = document.body?.dataset?.mask === '1';
-            if (!enabled) return;
-            const skipTags = new Set(['SCRIPT', 'STYLE', 'CANVAS', 'INPUT', 'TEXTAREA', 'SELECT', 'OPTION']);
-            document.querySelectorAll('*').forEach((el) => {
-              if (!el || skipTags.has(el.tagName)) return;
-              if (el.children && el.children.length > 0) return; // only leaf elements
-              const txt = (el.textContent || '').trim();
-              if (!txt) return;
-              if (!/\d/.test(txt)) return;
-              el.textContent = '***';
-            });
-          } catch (e) {
-            // ignore
+          const KEY = 'callc_mask_mode';
+          const MASK = '***';
+          const skipTags = new Set(['SCRIPT', 'STYLE', 'CANVAS']);
+
+          function isLeaf(el) {
+            return el && (!el.children || el.children.length === 0);
           }
+
+          function shouldMaskElement(el) {
+            if (!el || skipTags.has(el.tagName)) return false;
+            if (!isLeaf(el)) return false;
+            const txt = (el.textContent || '').trim();
+            if (!txt) return false;
+            return /\d/.test(txt);
+          }
+
+          function applyMask() {
+            document.querySelectorAll('*').forEach((el) => {
+              if (!shouldMaskElement(el)) return;
+              if (el.dataset && el.dataset.maskOrigText === undefined) {
+                el.dataset.maskOrigText = el.textContent || '';
+              }
+              el.textContent = MASK;
+            });
+          }
+
+          function clearMask() {
+            document.querySelectorAll('[data-mask-orig-text]').forEach((el) => {
+              const orig = el.dataset.maskOrigText;
+              el.textContent = orig ?? '';
+              delete el.dataset.maskOrigText;
+            });
+          }
+
+          function setEnabled(enabled) {
+            try { localStorage.setItem(KEY, enabled ? '1' : '0'); } catch (e) {}
+            if (enabled) applyMask(); else clearMask();
+          }
+
+          function getEnabled() {
+            try { return localStorage.getItem(KEY) === '1'; } catch (e) { return false; }
+          }
+
+          document.addEventListener('click', (e) => {
+            const a = e.target && e.target.closest ? e.target.closest('#maskToggle') : null;
+            if (!a) return;
+            e.preventDefault();
+            setEnabled(!getEnabled());
+          });
+
+          // Apply on load (no refresh needed)
+          if (getEnabled()) applyMask();
+
+          // If page content changes (collapse/ajax), re-apply mask
+          const obs = new MutationObserver(() => {
+            if (!getEnabled()) return;
+            applyMask();
+          });
+          obs.observe(document.body, { subtree: true, childList: true, characterData: true });
         })();
       </script>
 
