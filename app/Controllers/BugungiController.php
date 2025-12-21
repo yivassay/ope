@@ -441,6 +441,11 @@ final class BugungiController extends BaseController
                     + (float)($err['sum'] ?? 0)
                     - (float)$clientPaidDelivery;
 
+                $expenseBase = (float)($deliveryNoAgg['sum_final'] ?? 0) + (float)($pickupNoAgg['sum_final'] ?? 0);
+                $pctExpense = static function (float $v) use ($expenseBase): string {
+                    if ($expenseBase <= 0) return '0%';
+                    return number_format(($v / $expenseBase) * 100.0, 1, '.', '') . '%';
+                };
                 $money = static function (float $v): string {
                     return number_format($v, 2, '.', ' ');
                 };
@@ -462,15 +467,16 @@ final class BugungiController extends BaseController
                 $lines[] = "Wolt: {$money($wNet)}";
                 $lines[] = "";
                 $lines[] = "<b>💸Xarajatlar</b>";
-                $lines[] = "- Ish haqi: {$money((float)$salarySum)}";
-                $lines[] = "- Yandex taxi: {$money((float)($taxi['sum_total'] ?? 0))}";
-                $lines[] = "- Millennium: {$money((float)$millSum)}";
-                $lines[] = "- Bizning kuryerlar: {$money((float)$courierSum)}";
-                $lines[] = "- Opłatıl klient: {$money((float)$clientPaidDelivery)}";
-                $lines[] = "- Farq (Yandex+Millennium − Opłatıl klient): <b>{$money($taxiDiff)}</b>";
+                $lines[] = "Jami summa: <b>{$money($expensesTotal)}</b> ({$pctExpense($expensesTotal)})";
+                $lines[] = "- Ish haqi: {$money((float)$salarySum)} ({$pctExpense((float)$salarySum)})";
+                $lines[] = "- Yandex taxi: {$money((float)($taxi['sum_total'] ?? 0))} ({$pctExpense((float)($taxi['sum_total'] ?? 0))})";
+                $lines[] = "- Millennium: {$money((float)$millSum)} ({$pctExpense((float)$millSum)})";
+                $lines[] = "- Bizning kuryerlar: {$money((float)$courierSum)} ({$pctExpense((float)$courierSum)})";
                 if ((int)($err['cnt'] ?? 0) > 0) {
-                    $lines[] = "- Kosyaklar: " . (int)$err['cnt'] . " ta, {$money((float)$err['sum'])}";
+                    $lines[] = "- Kosyaklar: " . (int)$err['cnt'] . " ta, {$money((float)$err['sum'])} ({$pctExpense((float)($err['sum'] ?? 0))})";
                 }
+                $lines[] = "- Opłatıl klient (−): {$money((float)$clientPaidDelivery)} ({$pctExpense((float)$clientPaidDelivery)})";
+                $lines[] = "- Farq (Yandex+Millennium − Opłatıl klient): <b>{$money($taxiDiff)}</b> ({$pctExpense((float)$taxiDiff)})";
 
                 $lines[] = "";
                 $lines[] = "<b>🙂Ishchilar:</b>";
