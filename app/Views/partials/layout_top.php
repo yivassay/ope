@@ -159,34 +159,58 @@ if (!in_array($locale, ['uz', 'ru'], true)) $locale = 'uz';
           const skipTags = new Set(['SCRIPT', 'STYLE', 'CANVAS', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'TH', 'LABEL']);
           let applying = false;
           let scheduled = false;
+          const originals = new Map(); // TextNode -> original string
 
-          function isLeaf(el) {
-            return el && (!el.children || el.children.length === 0);
+          function hasSkippedAncestor(node) {
+            let el = node && node.parentElement;
+            while (el) {
+              if (skipTags.has(el.tagName)) return true;
+              el = el.parentElement;
+            }
+            return false;
           }
 
-          function shouldMaskElement(el) {
-            if (!el || skipTags.has(el.tagName)) return false;
-            if (!isLeaf(el)) return false;
-            const txt = (el.textContent || '').trim();
+          function shouldMaskText(text) {
+            const txt = (text || '').trim();
             if (!txt) return false;
-            // Don't mask dates/times or section numbering like "1) ..."
+            if (!/\d/.test(txt)) return false;
+            // Keep section numbering like "1) Foyda"
             if (/^\d+\)\s*/.test(txt)) return false;
-            if (/\b\d{4}-\d{2}-\d{2}\b/.test(txt)) return false; // 2025-12-21
-            if (/\b\d{1,2}:\d{2}(:\d{2})?\b/.test(txt)) return false; // 09:00 / 01:30
-            // Mask only if it looks like a value (has any digit) and is not purely a label
-            return /\d/.test(txt);
+            // Keep pure dates/times (avoid hiding page date)
+            if (/^\d{4}-\d{2}-\d{2}$/.test(txt)) return false;
+            if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(txt)) return false;
+            // If the whole text is a date with label like "Kun: 2025-12-20" keep it
+            if (/\b\d{4}-\d{2}-\d{2}\b/.test(txt) && txt.replace(/\b\d{4}-\d{2}-\d{2}\b/g, '').replace(/[^\p{L}]+/gu, '').length > 0) {
+              return false;
+            }
+            return true;
+          }
+
+          function maskText(text) {
+            // Replace any numeric group (including separators) with ***
+            return (text || '').replace(/(\d[\d\s.,]*)/g, MASK);
+          }
+
+          function forEachTextNode(cb) {
+            const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+              acceptNode(node) {
+                if (!node || !node.nodeValue) return NodeFilter.FILTER_REJECT;
+                if (hasSkippedAncestor(node)) return NodeFilter.FILTER_REJECT;
+                if (!shouldMaskText(node.nodeValue)) return NodeFilter.FILTER_REJECT;
+                return NodeFilter.FILTER_ACCEPT;
+              }
+            });
+            let n;
+            while ((n = walker.nextNode())) cb(n);
           }
 
           function applyMask() {
             if (applying) return;
             applying = true;
             try {
-              document.querySelectorAll('*').forEach((el) => {
-                if (!shouldMaskElement(el)) return;
-                if (el.dataset && el.dataset.maskOrigText === undefined) {
-                  el.dataset.maskOrigText = el.textContent || '';
-                }
-                el.textContent = MASK;
+              forEachTextNode((node) => {
+                if (!originals.has(node)) originals.set(node, node.nodeValue);
+                node.nodeValue = maskText(node.nodeValue);
               });
             } finally {
               applying = false;
@@ -194,11 +218,13 @@ if (!in_array($locale, ['uz', 'ru'], true)) $locale = 'uz';
           }
 
           function clearMask() {
-            document.querySelectorAll('[data-mask-orig-text]').forEach((el) => {
-              const orig = el.dataset.maskOrigText;
-              el.textContent = orig ?? '';
-              delete el.dataset.maskOrigText;
-            });
+            for (const [node, orig] of originals.entries()) {
+              if (!node || !node.isConnected) {
+                originals.delete(node);
+                continue;
+              }
+              node.nodeValue = orig;
+            }
           }
 
           function setEnabled(enabled) {
