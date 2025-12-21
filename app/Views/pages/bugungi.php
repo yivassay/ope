@@ -45,9 +45,12 @@ $paymentLabel = static function (string $ps) use ($t): string {
 $y = $agg['yandex'] ?? ['cnt'=>0,'sum_final'=>0];
 $w = $agg['wolt'] ?? ['cnt'=>0,'sum_final'=>0];
 $u = $uzum ?? ['cnt'=>0,'sum_final'=>0];
-$ySum = (float)($y['sum_final'] ?? 0);
-$wSum = (float)($w['sum_final'] ?? 0);
-$uSum = (float)($u['sum_final'] ?? 0);
+$yCnt = (int)($y['cnt'] ?? $y['order_count'] ?? $y['count'] ?? 0);
+$wCnt = (int)($w['cnt'] ?? $w['order_count'] ?? $w['count'] ?? 0);
+$uCnt = (int)($u['cnt'] ?? $u['order_count'] ?? $u['count'] ?? 0);
+$ySum = (float)($y['sum_final'] ?? $y['sum'] ?? 0);
+$wSum = (float)($w['sum_final'] ?? $w['sum'] ?? 0);
+$uSum = (float)($u['sum_final'] ?? $u['sum'] ?? 0);
 $yNet = $ySum * (1 - ((float)$commission['yandex']/100));
 $wNet = $wSum * (1 - ((float)$commission['wolt']/100));
 $uNet = $uSum * (1 - ((float)$commission['uzum']/100));
@@ -256,9 +259,9 @@ $taxiDiff = $taxiGross - (float)$clientPaidDelivery;
           <table class="table table-sm mb-0">
             <thead><tr><th><?= htmlspecialchars($t->t('common.channel', 'Kanal')) ?></th><th class="text-end"><?= htmlspecialchars($t->t('common.count', 'Cnt')) ?></th><th class="text-end"><?= htmlspecialchars($t->t('common.sum', 'Summa')) ?></th><th class="text-end"><?= htmlspecialchars($t->t('common.commission', 'Komissiya')) ?></th><th class="text-end"><?= htmlspecialchars($t->t('common.net', 'Net')) ?></th></tr></thead>
             <tbody>
-              <tr><td>Yandex Eda</td><td class="text-end"><?= num0($y['cnt']) ?></td><td class="text-end"><?= money($y['sum_final']) ?></td><td class="text-end"><?= money($commission['yandex']) ?>%</td><td class="text-end"><?= money($yNet) ?> <span class="text-muted small">(<?= $pctProfit((float)$yNet) ?>)</span></td></tr>
-              <tr><td>Wolt</td><td class="text-end"><?= num0($w['cnt']) ?></td><td class="text-end"><?= money($w['sum_final']) ?></td><td class="text-end"><?= money($commission['wolt']) ?>%</td><td class="text-end"><?= money($wNet) ?> <span class="text-muted small">(<?= $pctProfit((float)$wNet) ?>)</span></td></tr>
-              <tr><td>Uzum (qo‘lda)</td><td class="text-end"><?= num0($u['cnt']) ?></td><td class="text-end"><?= money($u['sum_final']) ?></td><td class="text-end"><?= money($commission['uzum']) ?>%</td><td class="text-end"><?= money($uNet) ?> <span class="text-muted small">(<?= $pctProfit((float)$uNet) ?>)</span></td></tr>
+              <tr><td>Yandex Eda</td><td class="text-end"><?= num0($yCnt) ?></td><td class="text-end"><?= money($ySum) ?></td><td class="text-end"><?= money($commission['yandex']) ?>%</td><td class="text-end"><?= money($yNet) ?> <span class="text-muted small">(<?= $pctProfit((float)$yNet) ?>)</span></td></tr>
+              <tr><td>Wolt</td><td class="text-end"><?= num0($wCnt) ?></td><td class="text-end"><?= money($wSum) ?></td><td class="text-end"><?= money($commission['wolt']) ?>%</td><td class="text-end"><?= money($wNet) ?> <span class="text-muted small">(<?= $pctProfit((float)$wNet) ?>)</span></td></tr>
+              <tr><td>Uzum (qo‘lda)</td><td class="text-end"><?= num0($uCnt) ?></td><td class="text-end"><?= money($uSum) ?></td><td class="text-end"><?= money($commission['uzum']) ?>%</td><td class="text-end"><?= money($uNet) ?> <span class="text-muted small">(<?= $pctProfit((float)$uNet) ?>)</span></td></tr>
             </tbody>
           </table>
         </div>
