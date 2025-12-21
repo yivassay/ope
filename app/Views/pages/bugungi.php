@@ -54,7 +54,8 @@ $uNet = $uSum * (1 - ((float)$commission['uzum']/100));
 
 // Profit total should use aggregator net (commission removed)
 $nonAggSum = (float)($deliveryNoAgg['sum_final'] ?? 0) + (float)($pickupNoAgg['sum_final'] ?? 0);
-$profitTotal = max(0.0, $nonAggSum + $yNet + $wNet + $uNet);
+$profitTotal = max(0.0, $nonAggSum + $yNet + $wNet + $uNet); // net revenue
+$grossTotal = (float)($total['sum_final'] ?? 0) + (float)($uSum ?? 0); // gross revenue (Smartomato + Uzum manual)
 
 $pctProfit = static function (float $v) use ($profitTotal): string {
     if ($profitTotal <= 0) return '0%';
@@ -126,7 +127,7 @@ $taxiDiff = $taxiGross - (float)$clientPaidDelivery;
         <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
           <div>
             <p class="fw-medium text-primary-light mb-1"><?= htmlspecialchars($t->t('bugungi.card.income', 'Jami summa')) ?></p>
-            <h6 class="mb-0"><?= money($profitTotal) ?></h6>
+            <h6 class="mb-0"><?= money($grossTotal) ?></h6>
           </div>
           <div class="w-50-px h-50-px bg-cyan rounded-circle d-flex justify-content-center align-items-center">
             <i class="ri-money-dollar-circle-line text-white text-2xl mb-0"></i>
@@ -134,7 +135,7 @@ $taxiDiff = $taxiGross - (float)$clientPaidDelivery;
         </div>
         <p class="fw-medium text-sm text-primary-light mt-12 mb-0 d-flex align-items-center gap-2">
           <span class="d-inline-flex align-items-center gap-1 text-success-main">
-            <i class="ri-arrow-right-up-line text-xs"></i> <?= htmlspecialchars($pctProfit($profitTotal)) ?>
+            <i class="ri-arrow-right-up-line text-xs"></i> 100%
           </span>
           <?= htmlspecialchars($t->t('bugungi.card.of_total_profit', 'ulushi')) ?>
         </p>

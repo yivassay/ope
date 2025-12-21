@@ -437,7 +437,8 @@ final class BugungiController extends BaseController
                 $lines[] = "📞CALL CENTER MK {$date}{$title}";
                 $lines[] = "";
                 $lines[] = "<b>💰Foyda</b>";
-                $lines[] = "Jami summa: <b>{$money($profitTotal)}</b>";
+                $grossTotal = (float)($total['sum_final'] ?? 0) + (float)($uzum['sum_final'] ?? 0);
+                $lines[] = "Jami summa: <b>{$money($grossTotal)}</b>";
                 $lines[] = "Foyda: <b>{$money($netProfit)}</b>";
                 $lines[] = "Yandex Eda: {$money($yNet)}";
                 $lines[] = "Uzum: {$money($uNet)}";
