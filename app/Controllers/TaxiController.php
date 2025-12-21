@@ -569,15 +569,6 @@ final class TaxiController extends BaseController
         return null;
     }
 
-    private function parseMoney(string $v): float
-    {
-        $v = trim($v);
-        if ($v === '' || $v === '-') return 0.0;
-        // remove spaces and currency artifacts
-        $v = str_replace(["\xC2\xA0", ' '], '', $v); // NBSP and spaces
-        // decimal comma -> dot
-        $v = str_replace(',', '.', $v);
-        return (float)$v;
-    }
+    // parseMoney is inherited from BaseController
 }
 

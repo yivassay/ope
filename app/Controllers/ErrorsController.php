@@ -134,13 +134,6 @@ final class ErrorsController extends BaseController
         return $out;
     }
 
-    private function parseMoney(string $v): float
-    {
-        $v = trim($v);
-        if ($v === '' || $v === '-') return 0.0;
-        $v = str_replace(["\xC2\xA0", ' '], '', $v);
-        $v = str_replace(',', '.', $v);
-        return (float)$v;
-    }
+    // parseMoney is inherited from BaseController
 }
 

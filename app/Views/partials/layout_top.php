@@ -156,7 +156,9 @@ if (!in_array($locale, ['uz', 'ru'], true)) $locale = 'uz';
         (function () {
           const KEY = 'callc_mask_mode';
           const MASK = '***';
-          const skipTags = new Set(['SCRIPT', 'STYLE', 'CANVAS']);
+          const skipTags = new Set(['SCRIPT', 'STYLE', 'CANVAS', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'TH', 'LABEL']);
+          let applying = false;
+          let scheduled = false;
 
           function isLeaf(el) {
             return el && (!el.children || el.children.length === 0);
@@ -167,17 +169,28 @@ if (!in_array($locale, ['uz', 'ru'], true)) $locale = 'uz';
             if (!isLeaf(el)) return false;
             const txt = (el.textContent || '').trim();
             if (!txt) return false;
+            // Don't mask dates/times or section numbering like "1) ..."
+            if (/^\d+\)\s*/.test(txt)) return false;
+            if (/\b\d{4}-\d{2}-\d{2}\b/.test(txt)) return false; // 2025-12-21
+            if (/\b\d{1,2}:\d{2}(:\d{2})?\b/.test(txt)) return false; // 09:00 / 01:30
+            // Mask only if it looks like a value (has any digit) and is not purely a label
             return /\d/.test(txt);
           }
 
           function applyMask() {
-            document.querySelectorAll('*').forEach((el) => {
-              if (!shouldMaskElement(el)) return;
-              if (el.dataset && el.dataset.maskOrigText === undefined) {
-                el.dataset.maskOrigText = el.textContent || '';
-              }
-              el.textContent = MASK;
-            });
+            if (applying) return;
+            applying = true;
+            try {
+              document.querySelectorAll('*').forEach((el) => {
+                if (!shouldMaskElement(el)) return;
+                if (el.dataset && el.dataset.maskOrigText === undefined) {
+                  el.dataset.maskOrigText = el.textContent || '';
+                }
+                el.textContent = MASK;
+              });
+            } finally {
+              applying = false;
+            }
           }
 
           function clearMask() {
@@ -210,9 +223,14 @@ if (!in_array($locale, ['uz', 'ru'], true)) $locale = 'uz';
           // If page content changes (collapse/ajax), re-apply mask
           const obs = new MutationObserver(() => {
             if (!getEnabled()) return;
-            applyMask();
+            if (applying || scheduled) return;
+            scheduled = true;
+            requestAnimationFrame(() => {
+              scheduled = false;
+              applyMask();
+            });
           });
-          obs.observe(document.body, { subtree: true, childList: true, characterData: true });
+          obs.observe(document.body, { subtree: true, childList: true });
         })();
       </script>
 
